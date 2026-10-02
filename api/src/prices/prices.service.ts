@@ -81,6 +81,11 @@ export class PricesService {
       }
     }
 
+    const pricedCount = cells.filter((cell) => cell.status !== 'missing').length;
+    this.logger.log(
+      `price lookup item=${uniqueName} enchantment=${enchantment} cities=${cities.join('|')} qualities=${qualities.join(',')} priced=${pricedCount}/${cells.length} keys=${keys.join(',')}`,
+    );
+
     return { uniqueName, name, cells };
   }
 

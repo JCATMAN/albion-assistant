@@ -121,8 +121,10 @@ func refreshStale(ctx context.Context, deps Deps) {
 		return
 	}
 	if len(keys) == 0 {
+		deps.Logf("stale scan found nothing alive=%t", deps.Alive())
 		return
 	}
+	deps.Logf("stale scan refreshing %d cells", len(keys))
 	items, cities, qualities := dimensions(keys)
 	updates, err := deps.Prices.Current(ctx, items, cities, qualities)
 	if err != nil {
@@ -148,6 +150,7 @@ func write(ctx context.Context, deps Deps, update cell.Update) {
 	for attempt := 1; attempt <= writeAttempts; attempt++ {
 		err = deps.Store.Apply(ctx, update)
 		if err == nil {
+			deps.Logf("stored %s source=%s", update.Key.String(), update.Source)
 			return
 		}
 	}

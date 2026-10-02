@@ -33,6 +33,14 @@ func main() {
 	}
 	redisClient := redis.NewClient(options)
 	defer func() { _ = redisClient.Close() }()
+	pingCtx, cancelPing := context.WithTimeout(ctx, 5*time.Second)
+	pingErr := redisClient.Ping(pingCtx).Err()
+	cancelPing()
+	if pingErr != nil {
+		log.Printf("redis ping failed: %v", pingErr)
+	} else {
+		log.Printf("redis ping ok")
+	}
 
 	subscriber, err := conn.Dial(cfg.NatsURL)
 	if err != nil {
