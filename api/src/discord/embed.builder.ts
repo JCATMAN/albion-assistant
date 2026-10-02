@@ -57,19 +57,17 @@ function formatTable(cells: PriceCell[]): string {
   const bestSell = bestSellPrice(ordered);
   const caption = sharedCaption(ordered);
   const cityHeader = 'Ciudad';
-  const sellHeader = 'Venta';
-  const sellAverageHeader = 'Promedio';
-  const buyHeader = 'Compra';
-  const buyAverageHeader = 'Promedio';
+  const sellHeader = 'Venta · prom.';
+  const buyHeader = 'Compra · prom.';
   const cityLabels = ordered.map((cell) => cityLabel(cell, bestSell));
   const sellLabels = ordered.map((cell) =>
     cell.status === 'missing'
       ? 'Sin precio'
-      : moneyLabel(cell.sellMin, cell.sellAmount),
+      : sideLabel(cell.sellMin, cell.sellAvg, cell.sellAmount),
   );
-  const sellAverageLabels = ordered.map((cell) => averageLabel(cell.sellAvg));
-  const buyLabels = ordered.map((cell) => moneyLabel(cell.buyMax, cell.buyAmount));
-  const buyAverageLabels = ordered.map((cell) => averageLabel(cell.buyAvg));
+  const buyLabels = ordered.map((cell) =>
+    sideLabel(cell.buyMax, cell.buyAvg, cell.buyAmount),
+  );
   const cityWidth = Math.max(
     displayWidth(cityHeader),
     ...cityLabels.map(displayWidth),
@@ -78,23 +76,13 @@ function formatTable(cells: PriceCell[]): string {
     sellHeader.length,
     ...sellLabels.map((label) => label.length),
   );
-  const sellAverageWidth = Math.max(
-    sellAverageHeader.length,
-    ...sellAverageLabels.map((label) => label.length),
-  );
-  const buyWidth = Math.max(
-    buyHeader.length,
-    ...buyLabels.map((label) => label.length),
-  );
   const lines = [
-    `${padRight(cityHeader, cityWidth)}  ${padLeft(sellHeader, sellWidth)}  ${padLeft(sellAverageHeader, sellAverageWidth)}  ${padLeft(buyHeader, buyWidth)}  ${buyAverageHeader}`,
+    `${padRight(cityHeader, cityWidth)}  ${padLeft(sellHeader, sellWidth)}  ${buyHeader}`,
     ...ordered.map((_cell, index) => {
       const city = cityLabels[index] ?? '';
       const sell = sellLabels[index] ?? '—';
-      const sellAverage = sellAverageLabels[index] ?? '—';
       const buy = buyLabels[index] ?? '—';
-      const buyAverage = buyAverageLabels[index] ?? '—';
-      return `${padRight(city, cityWidth)}  ${padLeft(sell, sellWidth)}  ${padLeft(sellAverage, sellAverageWidth)}  ${padLeft(buy, buyWidth)}  ${buyAverage}`;
+      return `${padRight(city, cityWidth)}  ${padLeft(sell, sellWidth)}  ${buy}`;
     }),
   ];
   const table = ['```', ...lines, '```'].join('\n');
@@ -123,18 +111,19 @@ function cityLabel(cell: PriceCell, bestSell: number | null): string {
   return `${cell.city}${best}`;
 }
 
-function moneyLabel(price: number | null, amount: number | null): string {
+function sideLabel(
+  price: number | null,
+  average: number | null,
+  amount: number | null,
+): string {
   if (price === null) {
     return '—';
   }
-  if (amount === null) {
-    return silver(price);
+  const listed = amount === null ? silver(price) : `${silver(price)} x${silver(amount)}`;
+  if (average === null) {
+    return listed;
   }
-  return `${silver(price)} x${silver(amount)}`;
-}
-
-function averageLabel(average: number | null): string {
-  return average === null ? '—' : silver(average);
+  return `${listed} · ${silver(average)}`;
 }
 
 function displayWidth(text: string): number {
