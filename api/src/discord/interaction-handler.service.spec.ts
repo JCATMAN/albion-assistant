@@ -140,7 +140,7 @@ describe('InteractionHandler', () => {
       throw new Error('expected a message');
     }
     expect(response.data.embeds[0]?.thumbnail?.url).toContain('T4_BAG@1');
-    expect(response.data.embeds[0]?.description).toContain('4978');
+    expect(response.data.embeds[0]?.description).toContain('4.978');
   });
 
   it('asks for a suggestion when the item text is not a unique name', async () => {

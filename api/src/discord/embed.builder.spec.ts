@@ -41,9 +41,13 @@ describe('buildPriceEmbed', () => {
     const embed = buildPriceEmbed(response);
 
     expect(embed.title).toBe('Bolsa del iniciado');
-    expect(embed.description).toContain('4978');
-    expect(embed.description).toContain('3200');
-    expect(embed.description).toContain('sell amount 12');
+    expect(embed.description).toContain('**Caerleon** ✅');
+    expect(embed.description).toContain('**Venta** 4.978');
+    expect(embed.description).toContain('**Compra** 3.200');
+    expect(embed.description).toContain('cantidad 12');
+    expect(embed.description).toContain('Fresco');
+    expect(embed.description).not.toContain('sell');
+    expect(embed.description).not.toContain('buy');
     expect(embed.thumbnail?.url).toBe(response.cells[0]?.iconUrl);
   });
 
@@ -57,7 +61,7 @@ describe('buildPriceEmbed', () => {
     const embed = buildPriceEmbed(response);
 
     expect(embed.description).toBe(
-      'No market prices are available for this item.',
+      'No hay precios de mercado para este objeto.',
     );
     expect(embed.description).not.toContain('0');
     expect(embed.thumbnail?.url).toBe(response.cells[0]?.iconUrl);
@@ -79,9 +83,9 @@ describe('buildPriceEmbed', () => {
     });
 
     expect(embed.description).toContain('Caerleon');
-    expect(embed.description).toContain('4978');
+    expect(embed.description).toContain('4.978');
     expect(embed.description).not.toContain('Thetford');
-    expect(embed.description).not.toContain('missing');
+    expect(embed.description).not.toContain('Sin precio');
   });
 
   it('keeps a missing line when the query did not ask for every city', () => {
@@ -94,7 +98,22 @@ describe('buildPriceEmbed', () => {
       ],
     });
 
-    expect(embed.description).toContain('Martlock');
-    expect(embed.description).toContain('missing');
+    expect(embed.description).toContain('**Martlock**');
+    expect(embed.description).toContain('Sin precio');
+    expect(embed.description).toContain('**Caerleon** ✅');
+  });
+
+  it('marks only the cheapest sell price', () => {
+    const embed = buildPriceEmbed({
+      uniqueName: 'T4_BAG',
+      name: 'Bolsa del iniciado',
+      cells: [
+        cell({ city: 'Thetford', status: 'fresh', sellMin: 3500, enchantment: 0 }),
+        cell({ city: 'Brecilien', status: 'fresh', sellMin: 3424, enchantment: 0 }),
+      ],
+    });
+
+    expect(embed.description).toContain('**Brecilien** ✅');
+    expect(embed.description).not.toContain('**Thetford** ✅');
   });
 });

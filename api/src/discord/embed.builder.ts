@@ -7,12 +7,20 @@ export interface DiscordEmbed {
   thumbnail?: { url: string };
 }
 
+const STATUS_LABEL = {
+  fresh: 'Fresco',
+  stale: 'Desactualizado',
+  missing: 'Sin precio',
+} as const;
+
+
 /** One embed for a price response. Missing cities are omitted only when all eight were asked. */
 export function buildPriceEmbed(response: PriceResponse): DiscordEmbed {
   const thumbnailUrl = response.cells[0]?.iconUrl;
+  const shown = visibleCells(response);
   const description = response.cells.every((cell) => cell.status === 'missing')
-    ? 'No market prices are available for this item.'
-    : visibleCells(response).map(formatCellLine).join('\n');
+    ? 'No hay precios de mercado para este objeto.'
+    : shown.map((cell) => formatCityBlock(cell, bestSellPrice(shown))).join('\n\n');
   const embed: DiscordEmbed = {
     title: response.name,
     description: description.slice(0, 4096),
@@ -33,30 +41,51 @@ function visibleCells(response: PriceResponse): PriceCell[] {
   return response.cells;
 }
 
-function formatCellLine(cell: PriceCell): string {
-  const parts = [
-    `${cell.city} · q${cell.quality} · e${cell.enchantment} · ${cell.status}`,
+function bestSellPrice(cells: PriceCell[]): number | null {
+  const prices = cells
+    .map((cell) => cell.sellMin)
+    .filter((price): price is number => price !== null && price > 0);
+  if (prices.length === 0) {
+    return null;
+  }
+  return Math.min(...prices);
+}
+
+function formatCityBlock(cell: PriceCell, bestSell: number | null): string {
+  const bestMark =
+    bestSell !== null && cell.sellMin === bestSell ? ' ✅' : '';
+  const lines = [
+    `**${cell.city}**${bestMark}`,
+    `Calidad ${cell.quality} · Encantamiento ${cell.enchantment} · ${STATUS_LABEL[cell.status]}`,
   ];
   if (cell.status === 'missing') {
-    return parts[0] ?? cell.city;
+    return lines.join('\n');
   }
   if (cell.sellMin !== null) {
-    parts.push(`sell ${cell.sellMin}`);
-  }
-  if (cell.sellAmount !== null) {
-    parts.push(`sell amount ${cell.sellAmount}`);
-  }
-  if (cell.sellAvg !== null) {
-    parts.push(`sell avg ${cell.sellAvg}`);
+    lines.push(priceLine('Venta', cell.sellMin, cell.sellAvg, cell.sellAmount));
   }
   if (cell.buyMax !== null) {
-    parts.push(`buy ${cell.buyMax}`);
+    lines.push(priceLine('Compra', cell.buyMax, cell.buyAvg, cell.buyAmount));
   }
-  if (cell.buyAmount !== null) {
-    parts.push(`buy amount ${cell.buyAmount}`);
+  return lines.join('\n');
+}
+
+function priceLine(
+  title: string,
+  price: number,
+  average: number | null,
+  amount: number | null,
+): string {
+  const parts = [`**${title}** ${silver(price)}`];
+  if (average !== null) {
+    parts.push(`promedio ${silver(average)}`);
   }
-  if (cell.buyAvg !== null) {
-    parts.push(`buy avg ${cell.buyAvg}`);
+  if (amount !== null) {
+    parts.push(`cantidad ${silver(amount)}`);
   }
   return parts.join(' · ');
+}
+
+function silver(value: number): string {
+  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
