@@ -41,11 +41,11 @@ describe('buildPriceEmbed', () => {
     const embed = buildPriceEmbed(response);
 
     expect(embed.title).toBe('Bolsa del iniciado');
-    expect(embed.description).toContain('**Caerleon** ✅');
-    expect(embed.description).toContain('**Venta** 4.978');
-    expect(embed.description).toContain('**Compra** 3.200');
-    expect(embed.description).toContain('cantidad 12');
-    expect(embed.description).toContain('Fresco');
+    expect(embed.description).toContain('**Calidad 1 · Encantamiento 1 · Reciente**');
+    expect(embed.description).toContain('Caerleon ✅');
+    expect(embed.description).toContain('4.978 x12');
+    expect(embed.description).toContain('3.200');
+    expect(embed.description).toContain('```');
     expect(embed.description).not.toContain('sell');
     expect(embed.description).not.toContain('buy');
     expect(embed.thumbnail?.url).toBe(response.cells[0]?.iconUrl);
@@ -98,9 +98,9 @@ describe('buildPriceEmbed', () => {
       ],
     });
 
-    expect(embed.description).toContain('**Martlock**');
+    expect(embed.description).toContain('Martlock');
     expect(embed.description).toContain('Sin precio');
-    expect(embed.description).toContain('**Caerleon** ✅');
+    expect(embed.description).toContain('Caerleon ✅');
   });
 
   it('marks only the cheapest sell price', () => {
@@ -113,7 +113,10 @@ describe('buildPriceEmbed', () => {
       ],
     });
 
-    expect(embed.description).toContain('**Brecilien** ✅');
-    expect(embed.description).not.toContain('**Thetford** ✅');
+    expect(embed.description).toContain('Brecilien ✅');
+    expect(embed.description).not.toContain('Thetford ✅');
+    expect(embed.description.indexOf('Brecilien')).toBeLessThan(
+      embed.description.indexOf('Thetford'),
+    );
   });
 });
