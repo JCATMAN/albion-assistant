@@ -28,8 +28,8 @@ services:
       FRESH_WITHIN: ${FRESH_WITHIN:-30m}
       CATALOG_REFRESH: ${CATALOG_REFRESH:-1h}
       DISCORD_PUBLIC_KEY: ${DISCORD_PUBLIC_KEY}
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     mem_limit: 192m
     cpus: 0.2
     restart: unless-stopped
