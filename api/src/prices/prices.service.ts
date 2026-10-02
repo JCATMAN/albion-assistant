@@ -201,7 +201,7 @@ export class PricesService {
           : new Date(stored.updatedAt * 1000).toISOString(),
       source: stored.source,
       status,
-      iconUrl: iconUrl(identity.uniqueName, identity.quality),
+      iconUrl: iconUrl(identity.uniqueName, identity.quality, 217),
     };
   }
 

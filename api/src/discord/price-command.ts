@@ -5,8 +5,17 @@ const INTEGER_OPTION = 4;
 
 export interface DiscordCommandChoice {
   name: string;
+  name_localizations?: { 'es-ES': string };
   value: string | number;
 }
+
+const QUALITIES: DiscordCommandChoice[] = [
+  { name: 'Normal', name_localizations: { 'es-ES': 'Normal' }, value: 1 },
+  { name: 'Good', name_localizations: { 'es-ES': 'Buena' }, value: 2 },
+  { name: 'Outstanding', name_localizations: { 'es-ES': 'Destacada' }, value: 3 },
+  { name: 'Excellent', name_localizations: { 'es-ES': 'Excelente' }, value: 4 },
+  { name: 'Masterpiece', name_localizations: { 'es-ES': 'Obra maestra' }, value: 5 },
+];
 
 export interface DiscordCommandOption {
   name: string;
@@ -59,10 +68,7 @@ export const priceCommand: DiscordCommand = {
       description_localizations: { 'es-ES': 'Calidad' },
       type: INTEGER_OPTION,
       required: false,
-      choices: [1, 2, 3, 4, 5].map((quality) => ({
-        name: String(quality),
-        value: quality,
-      })),
+      choices: QUALITIES,
     },
     {
       name: 'enchantment',

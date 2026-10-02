@@ -31,7 +31,9 @@ describe('buildPriceEmbed', () => {
           status: 'fresh',
           sellMin: 4978,
           sellAmount: 12,
+          sellAvg: 4978,
           buyMax: 3200,
+          buyAvg: 3200,
           updatedAt: '2026-06-01T11:59:00.000Z',
           source: 'nats',
         }),
@@ -41,14 +43,16 @@ describe('buildPriceEmbed', () => {
     const embed = buildPriceEmbed(response);
 
     expect(embed.title).toBe('Bolsa del iniciado');
-    expect(embed.description).toContain('**Calidad 1 · Encantamiento 1 · Reciente**');
-    expect(embed.description).toContain('Caerleon ✅');
-    expect(embed.description).toContain('4.978 x12');
-    expect(embed.description).toContain('3.200');
-    expect(embed.description).toContain('```');
+    expect(embed.description).toContain('**Normal · Encantamiento 1 · Reciente**');
+    expect(embed.description).toContain('**Caerleon** ✅');
+    expect(embed.description).toContain('**Venta** 4.978');
+    expect(embed.description).toContain('**Promedio** 4.978');
+    expect(embed.description).toContain('**Compra** 3.200');
+    expect(embed.description).toContain('cantidad 12');
+    expect(embed.description).not.toContain('```');
     expect(embed.description).not.toContain('sell');
     expect(embed.description).not.toContain('buy');
-    expect(embed.thumbnail?.url).toBe(response.cells[0]?.iconUrl);
+    expect(embed.image?.url).toBe(response.cells[0]?.iconUrl);
   });
 
   it('does not invent a zero when every cell is missing', () => {
@@ -64,7 +68,7 @@ describe('buildPriceEmbed', () => {
       'No hay precios de mercado para este objeto.',
     );
     expect(embed.description).not.toContain('0');
-    expect(embed.thumbnail?.url).toBe(response.cells[0]?.iconUrl);
+    expect(embed.image?.url).toBe(response.cells[0]?.iconUrl);
   });
 
   it('omits missing lines when all eight cities were requested and some have data', () => {
@@ -98,9 +102,9 @@ describe('buildPriceEmbed', () => {
       ],
     });
 
-    expect(embed.description).toContain('Martlock');
+    expect(embed.description).toContain('**Martlock**');
     expect(embed.description).toContain('Sin precio');
-    expect(embed.description).toContain('Caerleon ✅');
+    expect(embed.description).toContain('**Caerleon** ✅');
   });
 
   it('marks only the cheapest sell price', () => {
@@ -113,8 +117,8 @@ describe('buildPriceEmbed', () => {
       ],
     });
 
-    expect(embed.description).toContain('Brecilien ✅');
-    expect(embed.description).not.toContain('Thetford ✅');
+    expect(embed.description).toContain('**Brecilien** ✅');
+    expect(embed.description).not.toContain('**Thetford** ✅');
     expect(embed.description.indexOf('Brecilien')).toBeLessThan(
       embed.description.indexOf('Thetford'),
     );

@@ -5,6 +5,7 @@ export interface DiscordEmbed {
   title: string;
   description: string;
   thumbnail?: { url: string };
+  image?: { url: string };
 }
 
 const STATUS_LABEL = {
@@ -25,7 +26,7 @@ export function buildPriceEmbed(response: PriceResponse): DiscordEmbed {
     description: description.slice(0, 4096),
   };
   if (thumbnailUrl) {
-    embed.thumbnail = { url: thumbnailUrl };
+    embed.image = { url: thumbnailUrl };
   }
   return embed;
 }
@@ -56,29 +57,8 @@ function formatTable(cells: PriceCell[]): string {
   );
   const bestSell = bestSellPrice(ordered);
   const caption = sharedCaption(ordered);
-  const cityHeader = 'Ciudad';
-  const sellHeader = 'Venta';
-  const buyHeader = 'Compra';
-  const cityLabels = ordered.map((cell) => cityLabel(cell, bestSell));
-  const sellLabels = ordered.map((cell) =>
-    cell.status === 'missing'
-      ? 'Sin precio'
-      : priceLabel(cell.sellMin, cell.sellAvg, cell.sellAmount),
-  );
-  const buyLabels = ordered.map((cell) => priceLabel(cell.buyMax, cell.buyAvg, cell.buyAmount));
-  const cityWidth = Math.max(displayWidth(cityHeader), ...cityLabels.map(displayWidth));
-  const sellWidth = Math.max(sellHeader.length, ...sellLabels.map((label) => label.length));
-  const lines = [
-    `${padRight(cityHeader, cityWidth)}  ${padLeft(sellHeader, sellWidth)}  ${buyHeader}`,
-    ...ordered.map((unused, index) => {
-      const city = cityLabels[index] ?? '';
-      const sell = sellLabels[index] ?? '—';
-      const buy = buyLabels[index] ?? '—';
-      return `${padRight(city, cityWidth)}  ${padLeft(sell, sellWidth)}  ${buy}`;
-    }),
-  ];
-  const table = ['```', ...lines, '```'].join('\n');
-  return caption ? `${caption}\n${table}` : table;
+  const blocks = ordered.map((cell) => formatCity(cell, bestSell));
+  return caption ? `${caption}\n\n${blocks.join('\n\n')}` : blocks.join('\n\n');
 }
 
 function sharedCaption(cells: PriceCell[]): string | null {
@@ -95,49 +75,58 @@ function sharedCaption(cells: PriceCell[]): string | null {
   if (!sameContext) {
     return null;
   }
-  return `**Calidad ${first.quality} · Encantamiento ${first.enchantment} · ${STATUS_LABEL[first.status]}**`;
+  return `**${qualityName(first.quality)} · Encantamiento ${first.enchantment} · ${STATUS_LABEL[first.status]}**`;
 }
 
-function cityLabel(cell: PriceCell, bestSell: number | null): string {
+function formatCity(cell: PriceCell, bestSell: number | null): string {
   const best = bestSell !== null && cell.sellMin === bestSell ? ' ✅' : '';
-  return `${cell.city}${best}`;
+  const lines = [`**${cell.city}**${best}`];
+  if (cell.status === 'missing') {
+    lines.push('Sin precio');
+    return lines.join('\n');
+  }
+  if (cell.sellMin !== null) {
+    lines.push(sideLine('Venta', cell.sellMin, cell.sellAvg, cell.sellAmount));
+  }
+  if (cell.buyMax !== null) {
+    lines.push(sideLine('Compra', cell.buyMax, cell.buyAvg, cell.buyAmount));
+  }
+  return lines.join('\n');
 }
 
-function priceLabel(
-  price: number | null,
+function sideLine(
+  title: string,
+  price: number,
   average: number | null,
   amount: number | null,
 ): string {
-  if (price === null) {
-    return '—';
-  }
-  const parts = [silver(price)];
-  if (average !== null && average !== price) {
-    parts.push(`~${silver(average)}`);
+  const parts = [`**${title}** ${silver(price)}`];
+  if (average !== null) {
+    parts.push(`**Promedio** ${silver(average)}`);
   }
   if (amount !== null) {
-    parts.push(`x${silver(amount)}`);
+    parts.push(`cantidad ${silver(amount)}`);
   }
-  return parts.join(' ');
+  return parts.join(' · ');
+}
+
+const QUALITY_NAMES = [
+  '',
+  'Normal',
+  'Buena',
+  'Destacada',
+  'Excelente',
+  'Obra maestra',
+] as const;
+
+function qualityName(quality: number): string {
+  return QUALITY_NAMES[quality] ?? `Calidad ${quality}`;
 }
 
 function sellRank(cell: PriceCell): number {
   return cell.sellMin === null || cell.sellMin <= 0
     ? Number.POSITIVE_INFINITY
     : cell.sellMin;
-}
-
-function displayWidth(text: string): number {
-  const checks = text.match(/✅/g)?.length ?? 0;
-  return [...text].length + checks;
-}
-
-function padRight(text: string, width: number): string {
-  return text + ' '.repeat(Math.max(width - displayWidth(text), 0));
-}
-
-function padLeft(text: string, width: number): string {
-  return ' '.repeat(Math.max(width - text.length, 0)) + text;
 }
 
 function silver(value: number): string {

@@ -46,6 +46,16 @@ describe('priceCommand', () => {
     expect(quality?.choices?.map((choice) => choice.value)).toEqual([
       1, 2, 3, 4, 5,
     ]);
+    expect(quality?.choices?.map((choice) => choice.name)).toEqual([
+      'Normal',
+      'Good',
+      'Outstanding',
+      'Excellent',
+      'Masterpiece',
+    ]);
+    expect(
+      quality?.choices?.map((choice) => choice.name_localizations?.['es-ES']),
+    ).toEqual(['Normal', 'Buena', 'Destacada', 'Excelente', 'Obra maestra']);
   });
 
   it('lists enchantments 0 through 4', () => {
