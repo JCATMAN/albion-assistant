@@ -1,0 +1,42 @@
+services:
+  writer:
+    build: ./nats
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      NATS_URL: ${NATS_URL}
+      NATS_SUBJECT: ${NATS_SUBJECT:-marketorders.deduped}
+      ALBION_API_BASE: ${ALBION_API_BASE}
+      REDIS_URL: ${REDIS_URL}
+      CELL_TTL: ${CELL_TTL:-2h}
+      STALE_AFTER: ${STALE_AFTER:-30m}
+      AVG_ALPHA: ${AVG_ALPHA:-0.2}
+      API_RATE_PER_MIN: ${API_RATE_PER_MIN:-150}
+      WATCH_ITEMS: ${WATCH_ITEMS:-}
+    mem_limit: 64m
+    cpus: 0.1
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      PORT: "3000"
+      REDIS_URL: ${REDIS_URL}
+      ITEMS_URL: ${ITEMS_URL}
+      FRESH_WITHIN: ${FRESH_WITHIN:-30m}
+      CATALOG_REFRESH: ${CATALOG_REFRESH:-1h}
+      DISCORD_PUBLIC_KEY: ${DISCORD_PUBLIC_KEY}
+    ports:
+      - "3000:3000"
+    mem_limit: 192m
+    cpus: 0.2
+    restart: unless-stopped
+    networks:
+      - default
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true
