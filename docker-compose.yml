@@ -28,6 +28,7 @@ services:
       FRESH_WITHIN: ${FRESH_WITHIN:-30m}
       CATALOG_REFRESH: ${CATALOG_REFRESH:-1h}
       DISCORD_PUBLIC_KEY: ${DISCORD_PUBLIC_KEY}
+      ALBION_API_BASE: ${ALBION_API_BASE:-https://west.albion-online-data.com}
     expose:
       - "3000"
     mem_limit: 192m

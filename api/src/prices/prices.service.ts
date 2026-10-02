@@ -9,6 +9,7 @@ import { CatalogLocale, displayName } from '../catalog/item-name.index';
 import { CatalogService } from '../catalog/catalog.service';
 import { isMarketCity, MARKET_CITIES } from '../catalog/market-cities';
 import { AppConfig } from '../config/app-config';
+import { ALBION_PRICES, AlbionPrices } from './albion-prices';
 import { cellKey } from './cell-key';
 import { CLOCK, Clock } from './clock';
 import { iconUrl } from './icon-url';
@@ -30,6 +31,7 @@ export class PricesService {
     private readonly catalog: CatalogService,
     private readonly config: AppConfig,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(ALBION_PRICES) private readonly albionPrices: AlbionPrices,
   ) {}
 
   async get(query: PriceQuery): Promise<PriceResponse> {
@@ -60,6 +62,13 @@ export class PricesService {
       ),
     );
     const storedByKey = await this.readCells(keys);
+    await this.fillMissingFromAlbion(
+      uniqueName,
+      cities,
+      qualities,
+      enchantment,
+      storedByKey,
+    );
     const cells: PriceCell[] = [];
     for (const city of cities) {
       for (const quality of qualities) {
@@ -82,11 +91,76 @@ export class PricesService {
     }
 
     const pricedCount = cells.filter((cell) => cell.status !== 'missing').length;
+    const apiCount = cells.filter((cell) => cell.source === 'api').length;
     this.logger.log(
-      `price lookup item=${uniqueName} enchantment=${enchantment} cities=${cities.join('|')} qualities=${qualities.join(',')} priced=${pricedCount}/${cells.length} keys=${keys.join(',')}`,
+      `price lookup item=${uniqueName} enchantment=${enchantment} cities=${cities.join('|')} qualities=${qualities.join(',')} priced=${pricedCount}/${cells.length} fromApi=${apiCount} keys=${keys.join(',')}`,
     );
 
     return { uniqueName, name, cells };
+  }
+
+  /** Asks the West API for cells Redis has never seen, then stores that observation. */
+  private async fillMissingFromAlbion(
+    uniqueName: string,
+    cities: string[],
+    qualities: number[],
+    enchantment: number,
+    storedByKey: Map<string, StoredCell>,
+  ): Promise<void> {
+    const missing = cities.flatMap((city) =>
+      qualities.filter((quality) => {
+        const key = cellKey({
+          uniqueName,
+          city,
+          quality,
+          enchantment,
+        });
+        const stored = storedByKey.get(key) ?? emptyStoredCell();
+        return presentPrice(stored.sellMin) === null && presentPrice(stored.buyMax) === null;
+      }).map((quality) => ({ city, quality })),
+    );
+    if (missing.length === 0) {
+      return;
+    }
+    try {
+      const listed = await this.albionPrices.current(uniqueName, cities, qualities);
+      const observedAtUnix = Math.floor(this.clock().getTime() / 1000);
+      const writes = [];
+      for (const price of listed) {
+        const key = cellKey({
+          uniqueName,
+          city: price.city,
+          quality: price.quality,
+          enchantment,
+        });
+        const stored = storedByKey.get(key) ?? emptyStoredCell();
+        if (presentPrice(stored.sellMin) !== null || presentPrice(stored.buyMax) !== null) {
+          continue;
+        }
+        storedByKey.set(key, {
+          ...emptyStoredCell(),
+          sellMin: price.sellMin,
+          sellAvg: price.sellMin,
+          buyMax: price.buyMax,
+          buyAvg: price.buyMax,
+          updatedAt: observedAtUnix,
+          source: 'api',
+        });
+        writes.push({
+          key,
+          sellMin: price.sellMin,
+          buyMax: price.buyMax,
+          observedAtUnix,
+        });
+      }
+      await this.prices.saveApiPrices(writes);
+      this.logger.log(
+        `albion fallback item=${uniqueName} requested=${missing.length} stored=${writes.length}`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`albion fallback failed for ${uniqueName}: ${message}`);
+    }
   }
 
   private async readCells(keys: string[]): Promise<Map<string, StoredCell>> {

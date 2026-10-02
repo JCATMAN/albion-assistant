@@ -2,9 +2,9 @@ import { MARKET_CITIES } from '../catalog/market-cities';
 import { PriceCell, PriceResponse } from '../prices/price.types';
 
 export interface DiscordEmbed {
-  title?: string;
+  title: string;
   description: string;
-  author?: { name: string; icon_url: string };
+  thumbnail?: { url: string };
 }
 
 /** One embed for a price response. Missing cities are omitted only when all eight were asked. */
@@ -14,12 +14,11 @@ export function buildPriceEmbed(response: PriceResponse): DiscordEmbed {
     ? 'No market prices are available for this item.'
     : visibleCells(response).map(formatCellLine).join('\n');
   const embed: DiscordEmbed = {
+    title: response.name,
     description: description.slice(0, 4096),
   };
   if (thumbnailUrl) {
-    embed.author = { name: response.name, icon_url: thumbnailUrl };
-  } else {
-    embed.title = response.name;
+    embed.thumbnail = { url: thumbnailUrl };
   }
   return embed;
 }

@@ -17,6 +17,7 @@ import { parseAppConfig, toEnvRecord } from './env.schema';
           freshWithinMilliseconds: parsed.freshWithinMilliseconds,
           discordPublicKey: parsed.discordPublicKey,
           catalogRefreshMilliseconds: parsed.catalogRefreshMilliseconds,
+          albionApiBase: parsed.albionApiBase,
         };
       },
     }),
@@ -37,6 +38,7 @@ import { parseAppConfig, toEnvRecord } from './env.schema';
           catalogRefreshMilliseconds: configService.getOrThrow<number>(
             'catalogRefreshMilliseconds',
           ),
+          albionApiBase: configService.getOrThrow<string>('albionApiBase'),
         }),
     },
   ],

@@ -97,10 +97,11 @@ export class CatalogService implements OnModuleInit, OnModuleDestroy {
 
     const parsed = parseItemQuery(query);
     const found = parsed.text ? index.findByToken(parsed.text) : [];
-    const filtered =
+    const filtered = (
       parsed.tier === undefined
         ? found
-        : found.filter((item) => item.tier === parsed.tier);
+        : found.filter((item) => item.tier === parsed.tier)
+    ).filter((item) => !item.uniqueName.includes('NONTRADABLE'));
     filtered.sort((left, right) => {
       const leftRank = itemNameStartsWith(left, parsed.text) ? 0 : 1;
       const rightRank = itemNameStartsWith(right, parsed.text) ? 0 : 1;

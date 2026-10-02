@@ -1,4 +1,4 @@
-import { AppConfig } from './app-config';
+import { AppConfig, WEST_ALBION_API_BASE } from './app-config';
 
 const DURATION_PATTERN = /^(\d+)(s|m|h)$/;
 
@@ -26,6 +26,7 @@ export function parseAppConfig(
     freshWithinMilliseconds: optionalDuration(env, 'FRESH_WITHIN', '30m'),
     discordPublicKey: required(env, 'DISCORD_PUBLIC_KEY'),
     catalogRefreshMilliseconds: optionalDuration(env, 'CATALOG_REFRESH', '1h'),
+    albionApiBase: optionalText(env, 'ALBION_API_BASE', WEST_ALBION_API_BASE),
   });
 }
 
@@ -49,6 +50,18 @@ function required(
     throw new Error(`Missing required environment variable ${name}`);
   }
   return value;
+}
+
+function optionalText(
+  env: Record<string, string | undefined>,
+  name: string,
+  fallback: string,
+): string {
+  const value = read(env, name);
+  if (value === undefined || value === '') {
+    return fallback;
+  }
+  return value.replace(/\/$/, '');
 }
 
 function parsePort(raw: string | undefined): number {

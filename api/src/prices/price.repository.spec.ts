@@ -21,6 +21,12 @@ function fakeClient(
           keys.push(key);
           return pipeline;
         },
+        hset(): HashPipeline {
+          return pipeline;
+        },
+        expire(): HashPipeline {
+          return pipeline;
+        },
         exec: () =>
           Promise.resolve(
             keys.map((key) => {

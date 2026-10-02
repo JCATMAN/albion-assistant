@@ -8,6 +8,7 @@ import { CatalogItem } from '../catalog/item-name.index';
 import { CatalogService } from '../catalog/catalog.service';
 import { MARKET_CITIES } from '../catalog/market-cities';
 import { AppConfig } from '../config/app-config';
+import { ALBION_PRICES, AlbionListedPrice, AlbionPrices } from './albion-prices';
 import { CLOCK } from './clock';
 import {
   emptyStoredCell,
@@ -47,6 +48,10 @@ describe('PricesService', () => {
       }
       return Promise.resolve(result);
     },
+    saveApiPrices: () => Promise.resolve(),
+  };
+  const albionPrices: AlbionPrices = {
+    current: () => Promise.resolve([]),
   };
 
   let service: PricesService;
@@ -55,6 +60,8 @@ describe('PricesService', () => {
     cells.clear();
     seenKeys.length = 0;
     failReads = false;
+    albionPrices.current = () => Promise.resolve([]);
+    repository.saveApiPrices = () => Promise.resolve();
     const moduleRef = await Test.createTestingModule({
       providers: [
         PricesService,
@@ -78,6 +85,7 @@ describe('PricesService', () => {
           }),
         },
         { provide: CLOCK, useValue: () => now },
+        { provide: ALBION_PRICES, useValue: albionPrices },
       ],
     }).compile();
     service = moduleRef.get(PricesService);
@@ -140,6 +148,39 @@ describe('PricesService', () => {
 
     expect(response.cells[0]?.status).toBe('stale');
     expect(response.cells[0]?.sellMin).toBe(100);
+  });
+
+  it('fills an absent key from the West API and stores it', async () => {
+    const listed: AlbionListedPrice[] = [
+      { city: 'Caerleon', quality: 1, sellMin: 4978, buyMax: 3000 },
+    ];
+    albionPrices.current = jest.fn(() => Promise.resolve(listed));
+    const saved: unknown[] = [];
+    repository.saveApiPrices = (writes) => {
+      saved.push(writes);
+      return Promise.resolve();
+    };
+
+    const response = await service.get({
+      item: 'T4_BAG',
+      cities: 'Caerleon',
+      qualities: '1',
+      locale: 'es',
+    });
+
+    expect(albionPrices.current).toHaveBeenCalledWith(
+      'T4_BAG',
+      ['Caerleon'],
+      [1],
+    );
+    expect(saved).toHaveLength(1);
+    expect(response.cells[0]).toMatchObject({
+      sellMin: 4978,
+      buyMax: 3000,
+      sellAmount: null,
+      source: 'api',
+      status: 'fresh',
+    });
   });
 
   it('marks an absent key as missing and still returns an icon', async () => {

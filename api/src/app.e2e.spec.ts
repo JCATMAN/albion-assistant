@@ -15,7 +15,10 @@ import {
 describe('API (e2e)', () => {
   let app: INestApplication;
   const getMany = jest.fn<Promise<Map<string, StoredCell>>, [string[]]>();
-  const repository: PriceRepository = { getMany };
+  const repository: PriceRepository = {
+    getMany,
+    saveApiPrices: () => Promise.resolve(),
+  };
 
   beforeAll(async () => {
     process.env.PORT = '3000';

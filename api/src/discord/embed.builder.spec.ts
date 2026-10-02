@@ -40,11 +40,11 @@ describe('buildPriceEmbed', () => {
 
     const embed = buildPriceEmbed(response);
 
-    expect(embed.author?.name).toBe('Bolsa del iniciado');
+    expect(embed.title).toBe('Bolsa del iniciado');
     expect(embed.description).toContain('4978');
     expect(embed.description).toContain('3200');
     expect(embed.description).toContain('sell amount 12');
-    expect(embed.author?.icon_url).toBe(response.cells[0]?.iconUrl);
+    expect(embed.thumbnail?.url).toBe(response.cells[0]?.iconUrl);
   });
 
   it('does not invent a zero when every cell is missing', () => {
@@ -60,7 +60,7 @@ describe('buildPriceEmbed', () => {
       'No market prices are available for this item.',
     );
     expect(embed.description).not.toContain('0');
-    expect(embed.author?.icon_url).toBe(response.cells[0]?.iconUrl);
+    expect(embed.thumbnail?.url).toBe(response.cells[0]?.iconUrl);
   });
 
   it('omits missing lines when all eight cities were requested and some have data', () => {

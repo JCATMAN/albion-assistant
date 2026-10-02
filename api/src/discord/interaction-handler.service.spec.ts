@@ -139,7 +139,7 @@ describe('InteractionHandler', () => {
     if (response.type !== 4) {
       throw new Error('expected a message');
     }
-    expect(response.data.embeds[0]?.author?.icon_url).toContain('T4_BAG@1');
+    expect(response.data.embeds[0]?.thumbnail?.url).toContain('T4_BAG@1');
     expect(response.data.embeds[0]?.description).toContain('4978');
   });
 

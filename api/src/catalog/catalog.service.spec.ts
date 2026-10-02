@@ -207,6 +207,32 @@ describe('CatalogService', () => {
     service.onModuleDestroy();
   });
 
+  it('hides non-tradable copies from suggestions', async () => {
+    const items = [
+      {
+        UniqueName: 'T5_SILVERBAG',
+        LocalizedNames: {
+          'ES-ES': 'Bolsa de plata del experto',
+          'EN-US': "Expert's Silver Bag",
+        },
+      },
+      {
+        UniqueName: 'T5_SILVERBAG_NONTRADABLE',
+        LocalizedNames: {
+          'ES-ES': 'Bolsa de plata del experto',
+          'EN-US': "Expert's Silver Bag",
+        },
+      },
+    ];
+    const service = await serviceWith(() => Promise.resolve(ok(items)));
+    await service.onModuleInit();
+
+    expect(service.suggest('bolsa de plata').map((item) => item.uniqueName)).toEqual([
+      'T5_SILVERBAG',
+    ]);
+    service.onModuleDestroy();
+  });
+
   it('cuts suggestions to 25', async () => {
     const potions = Array.from({ length: 26 }, (_unused, index) => ({
       UniqueName: `T4_POTION_${index + 1}`,

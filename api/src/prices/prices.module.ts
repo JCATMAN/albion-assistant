@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CatalogModule } from '../catalog/catalog.module';
 import { AppConfig } from '../config/app-config';
 import { AppConfigModule } from '../config/config.module';
+import { ALBION_PRICES, HttpAlbionPrices } from './albion-prices';
 import { CLOCK } from './clock';
 import { PRICE_REPOSITORY } from './price.repository';
 import { PricesController } from './prices.controller';
@@ -17,6 +18,11 @@ import { createRedisPriceRepository } from './redis-price.repository';
     {
       provide: CLOCK,
       useValue: (): Date => new Date(),
+    },
+    {
+      provide: ALBION_PRICES,
+      inject: [AppConfig],
+      useFactory: (config: AppConfig) => new HttpAlbionPrices(config.albionApiBase),
     },
     {
       provide: PRICE_REPOSITORY,

@@ -12,8 +12,17 @@ export interface StoredCell {
   source: 'nats' | 'api' | null;
 }
 
+export interface ApiCellWrite {
+  key: string;
+  sellMin: number | null;
+  buyMax: number | null;
+  observedAtUnix: number;
+}
+
 export interface PriceRepository {
   getMany(keys: string[]): Promise<Map<string, StoredCell>>;
+  /** Stores an API observation. Does not write amounts. */
+  saveApiPrices(writes: ApiCellWrite[]): Promise<void>;
 }
 
 /** A cell with every field absent. Missing hashes use this instead of zeros. */

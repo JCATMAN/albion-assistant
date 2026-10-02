@@ -16,6 +16,7 @@ describe('parseAppConfig', () => {
     expect(config.discordPublicKey).toBe(minimumEnv.DISCORD_PUBLIC_KEY);
     expect(config.freshWithinMilliseconds).toBe(30 * 60 * 1000);
     expect(config.catalogRefreshMilliseconds).toBe(60 * 60 * 1000);
+    expect(config.albionApiBase).toBe('https://west.albion-online-data.com');
   });
 
   it('does not require the Discord register-script variables at boot', () => {

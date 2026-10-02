@@ -1,6 +1,7 @@
 import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import Redis from 'ioredis';
 import {
+  ApiCellWrite,
   emptyStoredCell,
   PriceRepository,
   StoredCell,
@@ -9,6 +10,8 @@ import {
 /** Client surface the repository needs. Tests pass a fake pipeline. */
 export interface HashPipeline {
   hgetall(key: string): HashPipeline;
+  hset(key: string, fields: Record<string, string>): HashPipeline;
+  expire(key: string, seconds: number): HashPipeline;
   exec(): Promise<Array<[Error | null, unknown]> | null>;
 }
 
@@ -60,6 +63,47 @@ export class RedisPriceRepository
     return stored;
   }
 
+  /** Writes sell/buy prices from the West API. Amounts stay untouched. */
+  async saveApiPrices(writes: ApiCellWrite[]): Promise<void> {
+    const filled = writes.filter(
+      (write) =>
+        (write.sellMin !== null && write.sellMin > 0) ||
+        (write.buyMax !== null && write.buyMax > 0),
+    );
+    if (filled.length === 0) {
+      return;
+    }
+    if (this.client.status === 'wait') {
+      await this.client.connect();
+    }
+    const pipeline = this.client.pipeline();
+    for (const write of filled) {
+      const fields: Record<string, string> = {
+        updated_at: String(write.observedAtUnix),
+        source: 'api',
+      };
+      if (write.sellMin !== null && write.sellMin > 0) {
+        fields.sell_min = String(write.sellMin);
+        fields.sell_avg = String(write.sellMin);
+      }
+      if (write.buyMax !== null && write.buyMax > 0) {
+        fields.buy_max = String(write.buyMax);
+        fields.buy_avg = String(write.buyMax);
+      }
+      pipeline.hset(write.key, fields);
+      pipeline.expire(write.key, 2 * 60 * 60);
+    }
+    const results = await pipeline.exec();
+    if (!results) {
+      throw new Error('Redis pipeline returned no results');
+    }
+    for (const [error] of results) {
+      if (error) {
+        throw error;
+      }
+    }
+  }
+
   async onApplicationShutdown(): Promise<void> {
     await this.client.quit();
   }
@@ -95,6 +139,14 @@ class IoredisHashClient implements HashRedisClient {
     const wrapper: HashPipeline = {
       hgetall(key: string): HashPipeline {
         raw.hgetall(key);
+        return wrapper;
+      },
+      hset(key: string, fields: Record<string, string>): HashPipeline {
+        raw.hset(key, fields);
+        return wrapper;
+      },
+      expire(key: string, seconds: number): HashPipeline {
+        raw.expire(key, seconds);
         return wrapper;
       },
       exec(): Promise<Array<[Error | null, unknown]> | null> {
