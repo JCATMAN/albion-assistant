@@ -177,6 +177,36 @@ describe('CatalogService', () => {
     service.onModuleDestroy();
   });
 
+  it('collapses enchanted copies that share a display name', async () => {
+    const copies = [0, 1, 2, 3, 4].map((enchantment) => ({
+      UniqueName: enchantment === 0 ? 'T5_BAG' : `T5_BAG@${enchantment}`,
+      LocalizedNames: {
+        'ES-ES': 'Bolsa del experto',
+        'EN-US': "Expert's Bag",
+      },
+    }));
+    const service = await serviceWith(() => Promise.resolve(ok(copies)));
+    await service.onModuleInit();
+
+    expect(service.suggest('bolsa del experto')).toEqual([
+      {
+        uniqueName: 'T5_BAG',
+        name: 'Bolsa del experto',
+        tier: 5,
+        enchantment: 0,
+      },
+    ]);
+    expect(service.suggest('bolsa del experto t5.2')).toEqual([
+      {
+        uniqueName: 'T5_BAG@2',
+        name: 'Bolsa del experto',
+        tier: 5,
+        enchantment: 2,
+      },
+    ]);
+    service.onModuleDestroy();
+  });
+
   it('cuts suggestions to 25', async () => {
     const potions = Array.from({ length: 26 }, (_unused, index) => ({
       UniqueName: `T4_POTION_${index + 1}`,

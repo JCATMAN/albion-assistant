@@ -107,7 +107,9 @@ export class CatalogService implements OnModuleInit, OnModuleDestroy {
       return leftRank - rightRank;
     });
     const enchantment = parsed.enchantment ?? 0;
-    return filtered.slice(0, MAXIMUM_SUGGESTIONS).map((item) => ({
+    return collapseEnchantmentCopies(filtered)
+      .slice(0, MAXIMUM_SUGGESTIONS)
+      .map((item) => ({
       uniqueName:
         enchantment > 0
           ? `${item.uniqueName.replace(/@[0-4]$/, '')}@${enchantment}`
@@ -157,4 +159,21 @@ export class CatalogService implements OnModuleInit, OnModuleDestroy {
     const payload: unknown = await response.json();
     return createItemNameIndex(catalogItemsFromPayload(payload));
   }
+}
+
+/** One row per base item. T5_BAG@1 uses the same Spanish name as T5_BAG. */
+function collapseEnchantmentCopies(items: CatalogItem[]): CatalogItem[] {
+  const seenBaseNames = new Set<string>();
+  const collapsed: CatalogItem[] = [];
+  for (const item of items) {
+    const baseName = item.uniqueName.replace(/@[0-4]$/, '');
+    if (seenBaseNames.has(baseName)) {
+      continue;
+    }
+    seenBaseNames.add(baseName);
+    collapsed.push(
+      baseName === item.uniqueName ? item : { ...item, uniqueName: baseName },
+    );
+  }
+  return collapsed;
 }
