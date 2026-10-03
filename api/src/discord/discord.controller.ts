@@ -6,6 +6,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { discordDeferType } from './discord-defer';
 import { DiscordSignatureGuard } from './discord-signature.guard';
 import {
   InteractionHandler,
@@ -20,7 +21,12 @@ export class DiscordController {
   @Post('interactions')
   @HttpCode(HttpStatus.OK)
   @UseGuards(DiscordSignatureGuard)
-  handle(@Body() body: unknown): Promise<InteractionResponse> {
+  handle(@Body() body: unknown): InteractionResponse | Promise<InteractionResponse> {
+    const deferType = discordDeferType(body);
+    if (deferType !== undefined) {
+      void this.interactions.completeDeferred(body);
+      return { type: deferType };
+    }
     return this.interactions.handle(body);
   }
 }

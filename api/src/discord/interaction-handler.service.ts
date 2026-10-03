@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CatalogLocale } from '../catalog/item-name.index';
 import { CatalogService, ItemSuggestion } from '../catalog/catalog.service';
 import { PriceQuery } from '../prices/price.types';
 import { PricesService } from '../prices/prices.service';
+import { discordCallback } from './discord-defer';
 import { buildPriceEmbed, DiscordEmbed } from './embed.builder';
 import {
   buildPriceButtons,
@@ -14,6 +15,7 @@ const MAXIMUM_CHOICES = 25;
 
 export type InteractionResponse =
   | { type: 1 }
+  | { type: 5 | 6 }
   | {
       type: 8;
       data: { choices: Array<{ name: string; value: string }> };
@@ -40,6 +42,8 @@ interface ParsedInteraction {
 /** Answers Discord pings, item autocomplete, and the price command. */
 @Injectable()
 export class InteractionHandler {
+  private readonly logger = new Logger(InteractionHandler.name);
+
   constructor(
     private readonly catalog: CatalogService,
     private readonly prices: PricesService,
@@ -63,6 +67,37 @@ export class InteractionHandler {
       return this.button(interaction.customId, interaction.locale);
     }
     return unsupported();
+  }
+
+  /** Edits the deferred Discord message after the price lookup finishes. */
+  async completeDeferred(body: unknown): Promise<void> {
+    const callback = discordCallback(body);
+    if (!callback) {
+      this.logger.error('deferred interaction is missing application_id or token');
+      return;
+    }
+    try {
+      const response = await this.handle(body);
+      if (response.type !== 4 && response.type !== 7) {
+        return;
+      }
+      const edit = await fetch(
+        `https://discord.com/api/v10/webhooks/${callback.applicationId}/${callback.token}/messages/@original`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(response.data),
+        },
+      );
+      if (!edit.ok) {
+        this.logger.error(
+          `discord edit failed with HTTP ${edit.status}`,
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`deferred price reply failed: ${message}`);
+    }
   }
 
   private autocomplete(interaction: ParsedInteraction): InteractionResponse {
