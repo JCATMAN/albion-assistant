@@ -8,10 +8,12 @@ describe('priceCommand', () => {
     expect(priceCommand.description_localizations['es-ES']).toBe('Precio');
   });
 
-  it('offers item and city; quality and enchantment are buttons', () => {
+  it('offers item, city, quality, and enchantment', () => {
     expect(priceCommand.options.map((option) => option.name)).toEqual([
       'item',
       'city',
+      'quality',
+      'enchantment',
     ]);
   });
 
@@ -34,4 +36,14 @@ describe('priceCommand', () => {
     ]);
   });
 
+  it('lists quality names instead of numbers', () => {
+    const quality = priceCommand.options.find((option) => option.name === 'quality');
+    expect(quality?.choices?.map((choice) => choice.name_localizations?.['es-ES'])).toEqual([
+      'Normal',
+      'Buena',
+      'Destacada',
+      'Excelente',
+      'Obra maestra',
+    ]);
+  });
 });

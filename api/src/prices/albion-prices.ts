@@ -30,6 +30,7 @@ export class HttpAlbionPrices implements AlbionPrices {
   ): Promise<AlbionListedPrice[]> {
     const response = await this.fetchImpl(priceUrl(this.baseUrl, item, cities, qualities), {
       headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(1200),
     });
     if (!response.ok) {
       throw new Error(`Albion prices failed with HTTP ${response.status}`);

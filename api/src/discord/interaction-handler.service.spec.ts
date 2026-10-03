@@ -150,6 +150,27 @@ describe('InteractionHandler', () => {
     expect(response.data.components?.[1]?.components[1]?.style).toBe(1);
   });
 
+  it('omits buttons when quality or enchantment was chosen in the command', async () => {
+    get.mockResolvedValue(priced);
+
+    const response = await handler.handle({
+      type: 2,
+      data: {
+        name: 'price',
+        options: [
+          { name: 'item', type: 3, value: 'T4_BAG' },
+          { name: 'quality', type: 4, value: 4 },
+        ],
+      },
+    });
+
+    expect(response.type).toBe(4);
+    if (response.type !== 4) {
+      throw new Error('expected a message');
+    }
+    expect(response.data.components).toBeUndefined();
+  });
+
   it('updates the same message when a quality button is pressed', async () => {
     get.mockResolvedValue(priced);
 

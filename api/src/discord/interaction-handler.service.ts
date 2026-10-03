@@ -112,16 +112,20 @@ export class InteractionHandler {
     }
 
     const city = readStringOption(interaction.options, 'city');
-    const quality = readIntegerOption(interaction.options, 'quality', 1, 5) ?? 1;
-    const enchantment =
-      readIntegerOption(interaction.options, 'enchantment', 0, 4) ??
-      enchantmentFromItem(itemText);
+    const chosenQuality = readIntegerOption(interaction.options, 'quality', 1, 5);
+    const chosenEnchantment = readIntegerOption(
+      interaction.options,
+      'enchantment',
+      0,
+      4,
+    );
     return {
       type: 4,
       data: await this.priceMessage({
         item: itemText,
-        quality,
-        enchantment,
+        quality: chosenQuality ?? 1,
+        enchantment: chosenEnchantment ?? enchantmentFromItem(itemText),
+        showButtons: chosenQuality === undefined && chosenEnchantment === undefined,
         locale: interaction.locale,
         ...(city ? { city } : {}),
       }),
@@ -138,7 +142,7 @@ export class InteractionHandler {
     }
     return {
       type: 7,
-      data: await this.priceMessage({ ...state, locale }),
+      data: await this.priceMessage({ ...state, locale, showButtons: true }),
     };
   }
 
@@ -147,8 +151,9 @@ export class InteractionHandler {
     quality: number;
     enchantment: number;
     locale: CatalogLocale;
+    showButtons: boolean;
     city?: string;
-  }): Promise<{ embeds: DiscordEmbed[]; components: DiscordActionRow[] }> {
+  }): Promise<{ embeds: DiscordEmbed[]; components?: DiscordActionRow[] }> {
     const query: PriceQuery = {
       item: input.item,
       locale: input.locale,
@@ -159,15 +164,18 @@ export class InteractionHandler {
       query.cities = input.city;
     }
     const prices = await this.prices.get(query);
-    return {
+    const message: { embeds: DiscordEmbed[]; components?: DiscordActionRow[] } = {
       embeds: [buildPriceEmbed(prices)],
-      components: buildPriceButtons({
+    };
+    if (input.showButtons) {
+      message.components = buildPriceButtons({
         item: input.item,
         quality: input.quality,
         enchantment: input.enchantment,
         ...(input.city ? { city: input.city } : {}),
-      }),
-    };
+      });
+    }
+    return message;
   }
 }
 
