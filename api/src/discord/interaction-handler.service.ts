@@ -4,6 +4,11 @@ import { CatalogService, ItemSuggestion } from '../catalog/catalog.service';
 import { PriceQuery } from '../prices/price.types';
 import { PricesService } from '../prices/prices.service';
 import { buildPriceEmbed, DiscordEmbed } from './embed.builder';
+import {
+  buildPriceButtons,
+  decodePriceButton,
+  DiscordActionRow,
+} from './price-buttons';
 
 const MAXIMUM_CHOICES = 25;
 
@@ -13,7 +18,10 @@ export type InteractionResponse =
       type: 8;
       data: { choices: Array<{ name: string; value: string }> };
     }
-  | { type: 4; data: { embeds: DiscordEmbed[] } };
+  | {
+      type: 4 | 7;
+      data: { embeds: DiscordEmbed[]; components?: DiscordActionRow[] };
+    };
 
 interface ParsedOption {
   name: string;
@@ -24,6 +32,7 @@ interface ParsedOption {
 interface ParsedInteraction {
   type: number;
   name?: string;
+  customId?: string;
   options: ParsedOption[];
   locale: CatalogLocale;
 }
@@ -49,6 +58,9 @@ export class InteractionHandler {
     }
     if (interaction.type === 2 && interaction.name === 'price') {
       return this.price(interaction);
+    }
+    if (interaction.type === 3 && interaction.customId) {
+      return this.button(interaction.customId, interaction.locale);
     }
     return unsupported();
   }
@@ -99,30 +111,69 @@ export class InteractionHandler {
       };
     }
 
-    const query: PriceQuery = {
-      item: itemText,
-      locale: interaction.locale,
-    };
     const city = readStringOption(interaction.options, 'city');
-    const quality = readIntegerOption(interaction.options, 'quality', 1, 5);
-    const enchantment = readIntegerOption(
-      interaction.options,
-      'enchantment',
-      0,
-      4,
-    );
-    if (city) {
-      query.cities = city;
+    const quality = readIntegerOption(interaction.options, 'quality', 1, 5) ?? 1;
+    const enchantment =
+      readIntegerOption(interaction.options, 'enchantment', 0, 4) ??
+      enchantmentFromItem(itemText);
+    return {
+      type: 4,
+      data: await this.priceMessage({
+        item: itemText,
+        quality,
+        enchantment,
+        locale: interaction.locale,
+        ...(city ? { city } : {}),
+      }),
+    };
+  }
+
+  private async button(
+    customId: string,
+    locale: CatalogLocale,
+  ): Promise<InteractionResponse> {
+    const state = decodePriceButton(customId);
+    if (!state) {
+      return unsupported();
     }
-    if (quality !== undefined) {
-      query.qualities = String(quality);
-    }
-    if (enchantment !== undefined) {
-      query.enchantment = enchantment;
+    return {
+      type: 7,
+      data: await this.priceMessage({ ...state, locale }),
+    };
+  }
+
+  private async priceMessage(input: {
+    item: string;
+    quality: number;
+    enchantment: number;
+    locale: CatalogLocale;
+    city?: string;
+  }): Promise<{ embeds: DiscordEmbed[]; components: DiscordActionRow[] }> {
+    const query: PriceQuery = {
+      item: input.item,
+      locale: input.locale,
+      qualities: String(input.quality),
+      enchantment: input.enchantment,
+    };
+    if (input.city) {
+      query.cities = input.city;
     }
     const prices = await this.prices.get(query);
-    return { type: 4, data: { embeds: [buildPriceEmbed(prices)] } };
+    return {
+      embeds: [buildPriceEmbed(prices)],
+      components: buildPriceButtons({
+        item: input.item,
+        quality: input.quality,
+        enchantment: input.enchantment,
+        ...(input.city ? { city: input.city } : {}),
+      }),
+    };
   }
+}
+
+function enchantmentFromItem(item: string): number {
+  const match = /@([0-4])$/.exec(item);
+  return match?.[1] ? Number(match[1]) : 0;
 }
 
 function formatChoiceName(suggestion: ItemSuggestion): string {
@@ -191,9 +242,12 @@ function parseInteraction(body: unknown): ParsedInteraction | undefined {
   }
   const data = asRecord(record.data);
   const name = data && typeof data.name === 'string' ? data.name : undefined;
+  const customId =
+    data && typeof data.custom_id === 'string' ? data.custom_id : undefined;
   return {
     type: record.type,
     ...(name !== undefined ? { name } : {}),
+    ...(customId !== undefined ? { customId } : {}),
     options: data ? parseOptions(data.options) : [],
     locale: readLocale(record.locale),
   };

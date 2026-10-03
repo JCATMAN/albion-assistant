@@ -134,13 +134,37 @@ describe('InteractionHandler', () => {
       },
     });
 
-    expect(get).toHaveBeenCalledWith({ item: 'T4_BAG@1', locale: 'es' });
+    expect(get).toHaveBeenCalledWith({
+      item: 'T4_BAG@1',
+      locale: 'es',
+      qualities: '1',
+      enchantment: 1,
+    });
     expect(response.type).toBe(4);
     if (response.type !== 4) {
       throw new Error('expected a message');
     }
     expect(response.data.embeds[0]?.thumbnail?.url).toContain('T4_BAG@1');
     expect(response.data.embeds[0]?.description).toContain('4.978');
+    expect(response.data.components).toHaveLength(2);
+    expect(response.data.components?.[1]?.components[1]?.style).toBe(1);
+  });
+
+  it('updates the same message when a quality button is pressed', async () => {
+    get.mockResolvedValue(priced);
+
+    const response = await handler.handle({
+      type: 3,
+      data: { custom_id: 'p:4:1:_:T4_BAG@1', component_type: 2 },
+    });
+
+    expect(get).toHaveBeenCalledWith({
+      item: 'T4_BAG@1',
+      locale: 'es',
+      qualities: '4',
+      enchantment: 1,
+    });
+    expect(response.type).toBe(7);
   });
 
   it('asks for a suggestion when the item text is not a unique name', async () => {

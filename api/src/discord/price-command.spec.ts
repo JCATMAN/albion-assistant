@@ -8,12 +8,10 @@ describe('priceCommand', () => {
     expect(priceCommand.description_localizations['es-ES']).toBe('Precio');
   });
 
-  it('offers item, city, quality, and enchantment', () => {
+  it('offers item and city; quality and enchantment are buttons', () => {
     expect(priceCommand.options.map((option) => option.name)).toEqual([
       'item',
       'city',
-      'quality',
-      'enchantment',
     ]);
   });
 
@@ -36,39 +34,4 @@ describe('priceCommand', () => {
     ]);
   });
 
-  it('lists qualities 1 through 5', () => {
-    const quality = priceCommand.options.find(
-      (option) => option.name === 'quality',
-    );
-    expect(quality?.type).toBe(4);
-    expect(quality?.name_localizations['es-ES']).toBe('calidad');
-    expect(quality?.description_localizations['es-ES']).toBe('Calidad');
-    expect(quality?.choices?.map((choice) => choice.value)).toEqual([
-      1, 2, 3, 4, 5,
-    ]);
-    expect(quality?.choices?.map((choice) => choice.name)).toEqual([
-      'Normal',
-      'Good',
-      'Outstanding',
-      'Excellent',
-      'Masterpiece',
-    ]);
-    expect(
-      quality?.choices?.map((choice) => choice.name_localizations?.['es-ES']),
-    ).toEqual(['Normal', 'Buena', 'Destacada', 'Excelente', 'Obra maestra']);
-  });
-
-  it('lists enchantments 0 through 4', () => {
-    const enchantment = priceCommand.options.find(
-      (option) => option.name === 'enchantment',
-    );
-    expect(enchantment?.type).toBe(4);
-    expect(enchantment?.name_localizations['es-ES']).toBe('encantamiento');
-    expect(enchantment?.description_localizations['es-ES']).toBe(
-      'Encantamiento',
-    );
-    expect(enchantment?.choices?.map((choice) => choice.value)).toEqual([
-      0, 1, 2, 3, 4,
-    ]);
-  });
 });

@@ -57,8 +57,8 @@ function formatTable(cells: PriceCell[]): string {
   const bestSell = bestSellPrice(ordered);
   const caption = sharedCaption(ordered);
   const cityHeader = 'Ciudad';
-  const sellHeader = 'Venta · prom.';
-  const buyHeader = 'Compra · prom.';
+  const sellHeader = 'Venta/Promedio';
+  const buyHeader = 'Compra/Promedio';
   const cityLabels = ordered.map((cell) => cityLabel(cell, bestSell));
   const sellLabels = ordered.map((cell) =>
     cell.status === 'missing'
@@ -119,11 +119,12 @@ function sideLabel(
   if (price === null) {
     return '—';
   }
-  const listed = amount === null ? silver(price) : `${silver(price)} x${silver(amount)}`;
-  if (average === null) {
-    return listed;
+  const listed = silver(price);
+  const withAverage = average === null ? listed : `${listed}/${silver(average)}`;
+  if (amount === null) {
+    return withAverage;
   }
-  return `${listed} · ${silver(average)}`;
+  return `${withAverage} x${silver(amount)}`;
 }
 
 function displayWidth(text: string): number {
