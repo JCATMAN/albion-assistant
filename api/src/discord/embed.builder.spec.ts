@@ -46,9 +46,12 @@ describe('buildPriceEmbed', () => {
     expect(embed.description).toContain('**Normal · Encantamiento 1 · Reciente**');
     expect(embed.description).toContain('```');
     expect(embed.description).toContain('Caerleon ✅');
-    expect(embed.description).toContain('Venta/Promedio');
-    expect(embed.description).toContain('4.978/4.978 x12');
-    expect(embed.description).toContain('3.200/3.200');
+    expect(embed.description).toContain('Venta');
+    expect(embed.description).toContain('Compra');
+    expect(embed.description).toContain('4.978 x12');
+    expect(embed.description).toContain('3.200');
+    expect(embed.description).not.toContain('Promedio');
+    expect(embed.description).not.toContain('/');
     expect(embed.description).not.toContain('sell');
     expect(embed.description).not.toContain('buy');
     expect(embed.thumbnail?.url).toBe(response.cells[0]?.iconUrl);

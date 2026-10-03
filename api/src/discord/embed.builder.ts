@@ -57,17 +57,15 @@ function formatTable(cells: PriceCell[]): string {
   const bestSell = bestSellPrice(ordered);
   const caption = sharedCaption(ordered);
   const cityHeader = 'Ciudad';
-  const sellHeader = 'Venta/Promedio';
-  const buyHeader = 'Compra/Promedio';
+  const sellHeader = 'Venta';
+  const buyHeader = 'Compra';
   const cityLabels = ordered.map((cell) => cityLabel(cell, bestSell));
   const sellLabels = ordered.map((cell) =>
     cell.status === 'missing'
       ? 'Sin precio'
-      : sideLabel(cell.sellMin, cell.sellAvg, cell.sellAmount),
+      : sideLabel(cell.sellMin, cell.sellAmount),
   );
-  const buyLabels = ordered.map((cell) =>
-    sideLabel(cell.buyMax, cell.buyAvg, cell.buyAmount),
-  );
+  const buyLabels = ordered.map((cell) => sideLabel(cell.buyMax, cell.buyAmount));
   const cityWidth = Math.max(
     displayWidth(cityHeader),
     ...cityLabels.map(displayWidth),
@@ -111,20 +109,14 @@ function cityLabel(cell: PriceCell, bestSell: number | null): string {
   return `${cell.city}${best}`;
 }
 
-function sideLabel(
-  price: number | null,
-  average: number | null,
-  amount: number | null,
-): string {
+function sideLabel(price: number | null, amount: number | null): string {
   if (price === null) {
     return '—';
   }
-  const listed = silver(price);
-  const withAverage = average === null ? listed : `${listed}/${silver(average)}`;
   if (amount === null) {
-    return withAverage;
+    return silver(price);
   }
-  return `${withAverage} x${silver(amount)}`;
+  return `${silver(price)} x${silver(amount)}`;
 }
 
 function displayWidth(text: string): number {
