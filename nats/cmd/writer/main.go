@@ -11,9 +11,11 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"albion-assistant/nats/internal/albionapi"
+	"albion-assistant/nats/internal/alert"
 	"albion-assistant/nats/internal/app"
 	"albion-assistant/nats/internal/config"
 	"albion-assistant/nats/internal/conn"
+	"albion-assistant/nats/internal/discord"
 	"albion-assistant/nats/internal/order"
 	"albion-assistant/nats/internal/store"
 )
@@ -57,6 +59,13 @@ func main() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
+	var sender app.AlertSender
+	if cfg.DiscordToken == "" {
+		log.Printf("discord alerts disabled: DISCORD_TOKEN is empty")
+	} else {
+		sender = discord.New(cfg.DiscordToken)
+	}
+
 	err = app.Run(ctx, app.Deps{
 		Orders:     orders,
 		Store:      store.New(redisClient, cfg.CellTTL, cfg.AvgAlpha),
@@ -67,6 +76,8 @@ func main() {
 		WatchItems: cfg.WatchItems,
 		Now:        time.Now,
 		Logf:       log.Printf,
+		Alerts:     alert.NewBook(redisClient),
+		Sender:     sender,
 	})
 	if err != nil {
 		log.Fatalf("writer stopped: %v", err)

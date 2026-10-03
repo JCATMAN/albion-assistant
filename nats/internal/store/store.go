@@ -25,17 +25,17 @@ func New(client *redis.Client, ttl time.Duration, alpha float64) *RedisStore {
 }
 
 // Apply loads the cell, folds the update, and writes the hash when the book changes.
-func (store *RedisStore) Apply(ctx context.Context, update cell.Update) error {
+func (store *RedisStore) Apply(ctx context.Context, update cell.Update) (cell.Applied, error) {
 	if !hasPositive(update.SellMin) && !hasPositive(update.BuyMax) {
-		return nil
+		return cell.Applied{}, nil
 	}
 	previous, err := store.load(ctx, update.Key)
 	if err != nil {
-		return err
+		return cell.Applied{}, err
 	}
 	next, decision := cell.Fold(previous, update)
 	if !decision.Write {
-		return nil
+		return cell.Applied{}, nil
 	}
 	if decision.SellChanged {
 		base := 0
@@ -51,7 +51,18 @@ func (store *RedisStore) Apply(ctx context.Context, update cell.Update) error {
 		}
 		next.BuyAvg = average.Next(base, next.BuyMax, store.alpha)
 	}
-	return store.save(ctx, update.Key, next, decision)
+	if err := store.save(ctx, update.Key, next, decision); err != nil {
+		return cell.Applied{}, err
+	}
+	return cell.Applied{
+		Written:     true,
+		SellChanged: decision.SellChanged,
+		BuyChanged:  decision.BuyChanged,
+		SellMin:     next.SellMin,
+		HasSell:     next.HasSell,
+		BuyMax:      next.BuyMax,
+		HasBuy:      next.HasBuy,
+	}, nil
 }
 
 // Stale returns at most limit west cells whose updated_at is older than olderThan.

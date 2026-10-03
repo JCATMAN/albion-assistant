@@ -1,8 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AlertService, AlertSide } from '../alerts/alert.service';
 import { CatalogLocale } from '../catalog/item-name.index';
 import { CatalogService, ItemSuggestion } from '../catalog/catalog.service';
+import { isMarketCity } from '../catalog/market-cities';
 import { PriceQuery } from '../prices/price.types';
 import { PricesService } from '../prices/prices.service';
+import { describeAlert } from './alert.reply';
 import { discordCallback } from './discord-defer';
 import { buildArbitrageEmbed } from './arbitrage.embed';
 import { findArbitrage } from '../prices/arbitrage';
@@ -40,9 +43,11 @@ interface ParsedInteraction {
   customId?: string;
   options: ParsedOption[];
   locale: CatalogLocale;
+  channelId?: string;
+  userId?: string;
 }
 
-/** Answers Discord pings, item autocomplete, and the price command. */
+/** Answers Discord pings, item autocomplete, and the price, arbitrage, and alert commands. */
 @Injectable()
 export class InteractionHandler {
   private readonly logger = new Logger(InteractionHandler.name);
@@ -50,6 +55,7 @@ export class InteractionHandler {
   constructor(
     private readonly catalog: CatalogService,
     private readonly prices: PricesService,
+    private readonly alerts: AlertService,
   ) {}
 
   async handle(body: unknown): Promise<InteractionResponse> {
@@ -68,6 +74,9 @@ export class InteractionHandler {
     }
     if (interaction.type === 2 && interaction.name === 'arbitrage') {
       return this.arbitrage(interaction);
+    }
+    if (interaction.type === 2 && interaction.name === 'alert') {
+      return this.alert(interaction);
     }
     if (interaction.type === 3 && interaction.customId) {
       return this.button(interaction.customId, interaction.locale);
@@ -205,6 +214,81 @@ export class InteractionHandler {
         locale: interaction.locale,
       }),
     };
+  }
+
+  private async alert(interaction: ParsedInteraction): Promise<InteractionResponse> {
+    const itemOption = interaction.options.find((option) => option.name === 'item');
+    const itemText =
+      itemOption && typeof itemOption.value === 'string' ? itemOption.value.trim() : '';
+    const found = itemText ? this.catalog.findByUniqueName(itemText) : undefined;
+    if (!itemText || !found) {
+      return messageEmbed(
+        'Elige una sugerencia',
+        'El aviso no adivina el objeto. Elige una opción del listado.',
+      );
+    }
+    const city = readStringOption(interaction.options, 'city');
+    if (!city || !isMarketCity(city)) {
+      return messageEmbed('Elige una ciudad', 'El aviso sigue una sola ciudad de la lista.');
+    }
+    const target = readIntegerOption(interaction.options, 'target', 1, 1_000_000_000);
+    if (target === undefined) {
+      return messageEmbed('Precio inválido', 'El objetivo tiene que ser un entero mayor que cero.');
+    }
+    const sideText = readStringOption(interaction.options, 'side') ?? 'sell';
+    if (sideText !== 'sell' && sideText !== 'buy') {
+      return messageEmbed('Lado inválido', 'El lado es venta o compra.');
+    }
+    const side: AlertSide = sideText;
+    if (!interaction.channelId || !interaction.userId) {
+      return messageEmbed(
+        'Falta el canal',
+        'Este aviso se publica en el canal donde escribes el comando.',
+      );
+    }
+    const quality = readIntegerOption(interaction.options, 'quality', 1, 5) ?? 1;
+    const enchantment =
+      readIntegerOption(interaction.options, 'enchantment', 0, 4) ??
+      enchantmentFromItem(itemText);
+    const prices = await this.prices.get({
+      item: itemText,
+      locale: interaction.locale,
+      cities: city,
+      qualities: String(quality),
+      enchantment,
+    });
+    const cell = prices.cells.find((entry) => entry.city === city);
+    const currentRaw = side === 'buy' ? cell?.buyMax : cell?.sellMin;
+    const current = currentRaw !== null && currentRaw !== undefined && currentRaw > 0 ? currentRaw : null;
+    const localized = found.names[interaction.locale];
+    const name = localized && localized.trim() !== '' ? localized : itemText;
+    const preview = describeAlert({
+      name,
+      city,
+      side,
+      target,
+      current,
+      replaced: false,
+    });
+    if (!preview.save) {
+      return messageEmbed(preview.title, preview.description);
+    }
+    const outcome = await this.alerts.save({
+      item: itemText,
+      name,
+      city,
+      quality,
+      enchantment,
+      side,
+      target,
+      channelId: interaction.channelId,
+      userId: interaction.userId,
+    });
+    const reply =
+      outcome === 'updated'
+        ? describeAlert({ name, city, side, target, current, replaced: true })
+        : preview;
+    return messageEmbed(reply.title, reply.description);
   }
 
   private async button(
@@ -378,7 +462,31 @@ function parseInteraction(body: unknown): ParsedInteraction | undefined {
     ...(customId !== undefined ? { customId } : {}),
     options: data ? parseOptions(data.options) : [],
     locale: readLocale(record.locale),
+    ...snowflakeFields(record),
   };
+}
+
+function snowflakeFields(record: Record<string, unknown>): {
+  channelId?: string;
+  userId?: string;
+} {
+  const channelId = readSnowflake(record.channel_id);
+  const member = asRecord(record.member);
+  const memberUser = member ? asRecord(member.user) : undefined;
+  const user = asRecord(record.user);
+  const userId = readSnowflake(memberUser?.id ?? user?.id);
+  return {
+    ...(channelId ? { channelId } : {}),
+    ...(userId ? { userId } : {}),
+  };
+}
+
+function readSnowflake(value: unknown): string | undefined {
+  return typeof value === 'string' && /^\d+$/.test(value) ? value : undefined;
+}
+
+function messageEmbed(title: string, description: string): InteractionResponse {
+  return { type: 4, data: { embeds: [{ title, description }] } };
 }
 
 function parseOptions(value: unknown): ParsedOption[] {

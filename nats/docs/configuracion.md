@@ -19,6 +19,7 @@ Todo lo que cambia entre máquinas entra por el entorno. Si falta una variable o
 | `AVG_ALPHA` | no | `0.2` |
 | `WATCH_ITEMS` | no | `T4_BAG,T5_BAG` |
 | `API_RATE_PER_MIN` | no | `150` |
+| `DISCORD_TOKEN` | no | token del bot, solo para publicar avisos |
 
 Defaults de código, cubiertos por test: subject `marketorders.deduped`, TTL `2h`, stale `30m`, alpha `0.2`, rate `150`. `WATCH_ITEMS` vacío significa que no hay barrido de arranque.
 

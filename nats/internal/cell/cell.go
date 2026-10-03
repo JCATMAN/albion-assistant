@@ -85,6 +85,17 @@ type Decision struct {
 	BuyChanged  bool
 }
 
+// Applied is what a successful write changed. Alerts use it to avoid firing on a quiet update.
+type Applied struct {
+	Written     bool
+	SellChanged bool
+	BuyChanged  bool
+	SellMin     int
+	HasSell     bool
+	BuyMax      int
+	HasBuy      bool
+}
+
 // Apply folds one NATS order into the previous snapshot.
 // The bool is true only when the best price on that side changes.
 func Apply(previous Snapshot, side order.Side, price int, amount int, at time.Time) (Snapshot, bool) {

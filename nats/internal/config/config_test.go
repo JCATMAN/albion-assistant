@@ -43,6 +43,9 @@ func TestLoadMinimalSetsDefaults(t *testing.T) {
 	if len(cfg.WatchItems) != 0 {
 		t.Fatalf("watch %#v", cfg.WatchItems)
 	}
+	if cfg.DiscordToken != "" {
+		t.Fatalf("token %q", cfg.DiscordToken)
+	}
 }
 
 func TestLoadMissingRequired(t *testing.T) {

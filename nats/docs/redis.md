@@ -29,7 +29,7 @@ Cantidad ausente: si el update viene del API, no se manda `sell_amount` ni `buy_
 
 Precio cero no se escribe. Si el lado no trae precio, ese campo se omite.
 
-`Stale(olderThan, limit)` recorre las claves `west:*` con `SCAN`, lee `updated_at` y devuelve como máximo `limit` celdas más viejas que el umbral. Hace falta para el respaldo. No se usa `KEYS`.
+`Stale(olderThan, limit)` recorre las claves `west:*` con `SCAN`, lee `updated_at` y devuelve como máximo `limit` celdas más viejas que el umbral. Hace falta para el respaldo. No se usa `KEYS`. Las claves `alert:`, `alerts:` y `alert-owner:` no entran en ese barrido.
 
 ## Resultado esperado
 

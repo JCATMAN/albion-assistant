@@ -12,6 +12,8 @@ Ejemplo: `west:T4_BAG:Caerleon:q1:e1`. `Black Market` y `Fort Sterling` llevan s
 
 Hash: `sell_min`, `sell_amount`, `sell_avg`, `buy_max`, `buy_amount`, `buy_avg`, `updated_at`, `source`. Un campo ausente no es un cero. El API de Albion no guarda cantidad, y un cero se leería como stock vacío.
 
+Los avisos no usan esta hash. Sus claves están en [aviso.md](aviso.md).
+
 ## Cómo hacerlo
 
 `cellKey(input: CellKeyInput): string` es pura. `PriceRepository` usa `ioredis` con `REDIS_URL`. `getMany(keys: string[])` abre un pipeline de `HGETALL` y devuelve un `Map`.

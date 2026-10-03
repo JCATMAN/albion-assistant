@@ -18,6 +18,7 @@ Región de esta versión: Américas. El diseño de celdas, el promedio y el resp
 | [redis.md](redis.md) | Hash, TTL y lectura atómica |
 | [respaldo-api.md](respaldo-api.md) | Arranque en frío y celdas viejas vía API |
 | [proceso.md](proceso.md) | Un solo loop, reconexión y apagado |
+| [aviso.md](aviso.md) | Mensaje en Discord cuando un precio cruza el objetivo |
 | [docker.md](docker.md) | Imagen y servicio en Compose |
 
 ## Resultado del módulo

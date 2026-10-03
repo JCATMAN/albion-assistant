@@ -118,8 +118,9 @@ Con default en el Compose, no hace falta definirlas:
 | `CATALOG_REFRESH` | `1h` | Recarga de `items.json` |
 | `WATCH_ITEMS` | vacío | Lista `T4_BAG,T5_BAG` para rellenar al arrancar |
 | `PORT` | `3000` | Puerto del API dentro del contenedor |
+| `DISCORD_TOKEN` | vacío | Si está, el writer publica los avisos. Vacío los deja guardados |
 
-`DISCORD_TOKEN` y `DISCORD_APP_ID` no entran al contenedor. Solo los usa `npm run register:commands`, que se corre a mano.
+`DISCORD_APP_ID` no entra al contenedor. Lo usa `npm run register:commands`, junto con el mismo `DISCORD_TOKEN`.
 
 En Dokploy, `REDIS_URL` apunta al host externo de la base (`redis://default:clave@ip:6379`). El writer no está en `dokploy-network`, así que el hostname interno del contenedor de Redis no le resuelve.
 
@@ -169,6 +170,8 @@ DISCORD_TOKEN=... DISCORD_APP_ID=... npm run register:commands
 El comando `price` muestra la tabla por ciudad. En español se ve como Precio. Las opciones son objeto, ciudad, calidad y encantamiento. Si no eliges calidad ni encantamiento, aparecen botones para cambiarlos sin un mensaje nuevo.
 
 El comando `arbitrage` busca la ruta: comprar en la ciudad más conveniente y vender al instante en otra. En español se ve como Arbitraje. No pide ciudad. El detalle está en [api/docs/arbitraje.md](api/docs/arbitraje.md).
+
+El comando `alert` guarda un aviso en el canal donde lo escribes. En español se ve como Aviso. Pide objeto, ciudad y plata. El writer publica la mención cuando el precio cruza ese número. El detalle está en [api/docs/aviso.md](api/docs/aviso.md).
 
 El autocompletado admite 25 opciones y no lleva imagen. El icono va en el embed. Hay que contestar en menos de 3 segundos: el bot avisa a Discord al momento y edita el mensaje cuando el precio está listo.
 

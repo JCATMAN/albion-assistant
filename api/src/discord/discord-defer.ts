@@ -6,7 +6,9 @@ export function discordDeferType(body: unknown): 5 | 6 | undefined {
   }
   if (record.type === 2) {
     const data = asRecord(record.data);
-    return data?.name === 'price' || data?.name === 'arbitrage' ? 5 : undefined;
+    return data?.name === 'price' || data?.name === 'arbitrage' || data?.name === 'alert'
+      ? 5
+      : undefined;
   }
   if (record.type === 3) {
     const data = asRecord(record.data);

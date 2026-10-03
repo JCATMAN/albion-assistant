@@ -36,7 +36,7 @@ func intPtr(value int) *int {
 func TestApplyFirstOffer(t *testing.T) {
 	store, client, server := newStore(t)
 	key := cell.Key{Item: "T4_BAG", City: "Caerleon", Quality: 1, Enchantment: 0}
-	err := store.Apply(context.Background(), cell.Update{
+	_, err := store.Apply(context.Background(), cell.Update{
 		Key:        key,
 		SellMin:    intPtr(4978),
 		SellAmount: intPtr(15),
@@ -63,12 +63,12 @@ func TestApplyCheaperOfferMovesAverage(t *testing.T) {
 	store, client, _ := newStore(t)
 	key := cell.Key{Item: "T4_BAG", City: "Caerleon", Quality: 1, Enchantment: 0}
 	at := time.Unix(1_700_000_000, 0)
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(5000), SellAmount: intPtr(10), UpdatedAt: at, Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(4000), SellAmount: intPtr(4), UpdatedAt: at.Add(time.Minute), Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)
@@ -84,11 +84,11 @@ func TestApplyMoreExpensiveOfferLeavesHash(t *testing.T) {
 	key := cell.Key{Item: "T4_BAG", City: "Caerleon", Quality: 1, Enchantment: 0}
 	at := time.Unix(1_700_000_000, 0)
 	first := cell.Update{Key: key, SellMin: intPtr(5000), SellAmount: intPtr(10), UpdatedAt: at, Source: cell.SourceNATS}
-	if err := store.Apply(context.Background(), first); err != nil {
+	if _, err := store.Apply(context.Background(), first); err != nil {
 		t.Fatal(err)
 	}
 	before := readHash(t, client, key.String())
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(6000), SellAmount: intPtr(3), UpdatedAt: at.Add(time.Minute), Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)
@@ -103,12 +103,12 @@ func TestApplySamePriceUpdatesAmountOnce(t *testing.T) {
 	store, client, _ := newStore(t)
 	key := cell.Key{Item: "T4_BAG", City: "Caerleon", Quality: 1, Enchantment: 0}
 	at := time.Unix(1_700_000_000, 0)
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(4978), SellAmount: intPtr(15), UpdatedAt: at, Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(4978), SellAmount: intPtr(40), UpdatedAt: at.Add(time.Minute), Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)
@@ -122,7 +122,7 @@ func TestApplySamePriceUpdatesAmountOnce(t *testing.T) {
 func TestApplyAPIWithoutAmount(t *testing.T) {
 	store, client, _ := newStore(t)
 	key := cell.Key{Item: "T4_BAG", City: "Caerleon", Quality: 1, Enchantment: 0}
-	err := store.Apply(context.Background(), cell.Update{
+	_, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(4978), UpdatedAt: time.Unix(1_700_000_000, 0), Source: cell.SourceAPI,
 	})
 	if err != nil {
@@ -141,12 +141,12 @@ func TestApplyAPIKeepsExistingAmount(t *testing.T) {
 	store, client, _ := newStore(t)
 	key := cell.Key{Item: "T4_BAG", City: "Caerleon", Quality: 1, Enchantment: 0}
 	at := time.Unix(1_700_000_000, 0)
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(4978), SellAmount: intPtr(15), UpdatedAt: at, Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(4500), UpdatedAt: at.Add(time.Minute), Source: cell.SourceAPI,
 	}); err != nil {
 		t.Fatal(err)
@@ -161,13 +161,13 @@ func TestApplyOlderAPIDoesNotOverwrite(t *testing.T) {
 	store, client, _ := newStore(t)
 	key := cell.Key{Item: "T4_BAG", City: "Caerleon", Quality: 1, Enchantment: 0}
 	newer := time.Unix(5_000, 0)
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(4978), SellAmount: intPtr(15), UpdatedAt: newer, Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)
 	}
 	before := readHash(t, client, key.String())
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(1000), UpdatedAt: time.Unix(1_000, 0), Source: cell.SourceAPI,
 	}); err != nil {
 		t.Fatal(err)
@@ -181,7 +181,7 @@ func TestApplyOlderAPIDoesNotOverwrite(t *testing.T) {
 func TestApplyZeroPriceDoesNotCreateKey(t *testing.T) {
 	store, _, server := newStore(t)
 	key := cell.Key{Item: "T4_BAG", City: "Caerleon", Quality: 1, Enchantment: 0}
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: key, SellMin: intPtr(0), UpdatedAt: time.Unix(1_700_000_000, 0), Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)
@@ -195,12 +195,12 @@ func TestStaleReturnsOnlyOldCellsAndRespectsLimit(t *testing.T) {
 	store, _, _ := newStore(t)
 	oldKey := cell.Key{Item: "T4_BAG", City: "Caerleon", Quality: 1, Enchantment: 0}
 	newKey := cell.Key{Item: "T5_BAG", City: "Martlock", Quality: 1, Enchantment: 0}
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: oldKey, SellMin: intPtr(10), SellAmount: intPtr(1), UpdatedAt: time.Unix(1_000, 0), Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: newKey, SellMin: intPtr(20), SellAmount: intPtr(1), UpdatedAt: time.Unix(5_000, 0), Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)
@@ -214,7 +214,7 @@ func TestStaleReturnsOnlyOldCellsAndRespectsLimit(t *testing.T) {
 	}
 
 	otherOld := cell.Key{Item: "T6_BAG", City: "Thetford", Quality: 1, Enchantment: 0}
-	if err := store.Apply(context.Background(), cell.Update{
+	if _, err := store.Apply(context.Background(), cell.Update{
 		Key: otherOld, SellMin: intPtr(30), SellAmount: intPtr(1), UpdatedAt: time.Unix(1_100, 0), Source: cell.SourceNATS,
 	}); err != nil {
 		t.Fatal(err)

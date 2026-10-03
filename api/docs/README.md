@@ -18,6 +18,7 @@ El código —archivos, clases, funciones, DTOs, tests y comentarios— va en in
 | [precios.md](precios.md) | `GET /prices` |
 | [discord.md](discord.md) | Interactions, autocompletado y embed |
 | [arbitraje.md](arbitraje.md) | Dónde comprar barato y vender caro |
+| [aviso.md](aviso.md) | Aviso en el canal cuando el precio cruza un objetivo |
 | [docker.md](docker.md) | Imagen y servicio en el VPS |
 
 ## Resultado del módulo
@@ -31,4 +32,4 @@ Un servicio Nest que:
 
 ## Fuera de este módulo
 
-Suscripción NATS, respaldo del API de Albion, media móvil y escritura en Redis. Eso es `nats/`.
+Suscripción NATS, respaldo del API de Albion, media móvil y escritura de las celdas de precio. Eso es `nats/`. El comando de aviso escribe sus claves; el writer las lee y publica el mensaje.

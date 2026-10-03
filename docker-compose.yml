@@ -13,6 +13,7 @@ services:
       AVG_ALPHA: ${AVG_ALPHA:-0.2}
       API_RATE_PER_MIN: ${API_RATE_PER_MIN:-150}
       WATCH_ITEMS: ${WATCH_ITEMS:-}
+      DISCORD_TOKEN: ${DISCORD_TOKEN:-}
     mem_limit: 64m
     cpus: 0.1
     restart: unless-stopped

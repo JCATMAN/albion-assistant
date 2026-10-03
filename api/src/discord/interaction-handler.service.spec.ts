@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
+import { AlertService } from '../alerts/alert.service';
 import { CatalogItem } from '../catalog/item-name.index';
 import { CatalogService, ItemSuggestion } from '../catalog/catalog.service';
 import { PriceResponse } from '../prices/price.types';
@@ -46,12 +47,14 @@ describe('InteractionHandler', () => {
   const suggest = jest.fn();
   const findByUniqueName = jest.fn();
   const get = jest.fn();
+  const save = jest.fn();
   let handler: InteractionHandler;
 
   beforeEach(async () => {
     suggest.mockReset();
     findByUniqueName.mockReset();
     get.mockReset();
+    save.mockReset();
     findByUniqueName.mockImplementation((uniqueName: string) =>
       uniqueName === 'T4_BAG' || uniqueName === 'T4_BAG@1' ? bag : undefined,
     );
@@ -63,6 +66,7 @@ describe('InteractionHandler', () => {
           useValue: { suggest, findByUniqueName },
         },
         { provide: PricesService, useValue: { get } },
+        { provide: AlertService, useValue: { save } },
       ],
     }).compile();
     handler = moduleRef.get(InteractionHandler);
@@ -211,6 +215,67 @@ describe('InteractionHandler', () => {
     }
     expect(response.data.embeds[0]?.description).toContain('No hay ruta');
     expect(response.data.components).toHaveLength(2);
+  });
+
+  it('stores an alert when the sell price is still above the target', async () => {
+    get.mockResolvedValue(priced);
+    save.mockResolvedValue('created');
+
+    const response = await handler.handle({
+      type: 2,
+      channel_id: '100',
+      member: { user: { id: '42' } },
+      data: {
+        name: 'alert',
+        options: [
+          { name: 'item', type: 3, value: 'T4_BAG' },
+          { name: 'city', type: 3, value: 'Caerleon' },
+          { name: 'target', type: 4, value: 4000 },
+        ],
+      },
+    });
+
+    expect(save).toHaveBeenCalledWith({
+      item: 'T4_BAG',
+      name: 'Bolsa del iniciado',
+      city: 'Caerleon',
+      quality: 1,
+      enchantment: 0,
+      side: 'sell',
+      target: 4000,
+      channelId: '100',
+      userId: '42',
+    });
+    expect(response.type).toBe(4);
+    if (response.type !== 4) {
+      throw new Error('expected a message');
+    }
+    expect(response.data.embeds[0]?.title).toBe('Aviso guardado');
+  });
+
+  it('does not store an alert that the current price already meets', async () => {
+    get.mockResolvedValue(priced);
+
+    const response = await handler.handle({
+      type: 2,
+      channel_id: '100',
+      member: { user: { id: '42' } },
+      data: {
+        name: 'alert',
+        options: [
+          { name: 'item', type: 3, value: 'T4_BAG' },
+          { name: 'city', type: 3, value: 'Caerleon' },
+          { name: 'target', type: 4, value: 6000 },
+        ],
+      },
+    });
+
+    expect(save).not.toHaveBeenCalled();
+    expect(response.type).toBe(4);
+    if (response.type !== 4) {
+      throw new Error('expected a message');
+    }
+    expect(response.data.embeds[0]?.description).toContain('No guardé el aviso');
   });
 
   it('asks for a suggestion when the item text is not a unique name', async () => {

@@ -1,12 +1,8 @@
 import { MARKET_CITIES } from '../catalog/market-cities';
+import { DiscordCommand, DiscordCommandChoice } from './price-command';
 
 const STRING_OPTION = 3;
 const INTEGER_OPTION = 4;
-export interface DiscordCommandChoice {
-  name: string;
-  name_localizations?: { 'es-ES': string };
-  value: string | number;
-}
 
 const QUALITIES: DiscordCommandChoice[] = [
   { name: 'Normal', name_localizations: { 'es-ES': 'Normal' }, value: 1 },
@@ -16,33 +12,14 @@ const QUALITIES: DiscordCommandChoice[] = [
   { name: 'Masterpiece', name_localizations: { 'es-ES': 'Obra maestra' }, value: 5 },
 ];
 
-export interface DiscordCommandOption {
-  name: string;
-  name_localizations: { 'es-ES': string };
-  description: string;
-  description_localizations: { 'es-ES': string };
-  type: number;
-  required: boolean;
-  autocomplete?: boolean;
-  choices?: DiscordCommandChoice[];
-  min_value?: number;
-  max_value?: number;
-}
-
-export interface DiscordCommand {
-  name: string;
-  name_localizations: { 'es-ES': string };
-  description: string;
-  description_localizations: { 'es-ES': string };
-  options: DiscordCommandOption[];
-}
-
-/** Slash command registered by the manual script. Names stay English; es-ES is lowercase. */
-export const priceCommand: DiscordCommand = {
-  name: 'price',
-  name_localizations: { 'es-ES': 'precio' },
-  description: 'Show the market price of an item',
-  description_localizations: { 'es-ES': 'Precio' },
+/** Slash command that stores a channel watch. The writer sends the later message. */
+export const alertCommand: DiscordCommand = {
+  name: 'alert',
+  name_localizations: { 'es-ES': 'aviso' },
+  description: 'Tell me in this channel when a price crosses a target',
+  description_localizations: {
+    'es-ES': 'Avísame en este canal cuando el precio cruce un objetivo',
+  },
   options: [
     {
       name: 'item',
@@ -59,8 +36,32 @@ export const priceCommand: DiscordCommand = {
       description: 'City',
       description_localizations: { 'es-ES': 'Ciudad' },
       type: STRING_OPTION,
-      required: false,
+      required: true,
       choices: MARKET_CITIES.map((city) => ({ name: city, value: city })),
+    },
+    {
+      name: 'target',
+      name_localizations: { 'es-ES': 'precio' },
+      description: 'Target silver',
+      description_localizations: { 'es-ES': 'Plata objetivo' },
+      type: INTEGER_OPTION,
+      required: true,
+      min_value: 1,
+      max_value: 1_000_000_000,
+    },
+    {
+      name: 'side',
+      name_localizations: { 'es-ES': 'lado' },
+      description: 'Sell drops to the target, or buy rises to it',
+      description_localizations: {
+        'es-ES': 'La venta baja al objetivo, o la compra sube',
+      },
+      type: STRING_OPTION,
+      required: false,
+      choices: [
+        { name: 'Sell', name_localizations: { 'es-ES': 'Venta' }, value: 'sell' },
+        { name: 'Buy', name_localizations: { 'es-ES': 'Compra' }, value: 'buy' },
+      ],
     },
     {
       name: 'quality',

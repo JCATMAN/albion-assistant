@@ -27,6 +27,7 @@ type Config struct {
 	AvgAlpha      float64
 	WatchItems    []string
 	APIRatePerMin int
+	DiscordToken  string
 }
 
 // Load reads configuration through getenv. A missing required variable returns an error and a zero Config.
@@ -83,6 +84,7 @@ func parse(getenv func(string) string) (Config, error) {
 		AvgAlpha:      alpha,
 		WatchItems:    splitList(getenv("WATCH_ITEMS")),
 		APIRatePerMin: rate,
+		DiscordToken:  strings.TrimSpace(getenv("DISCORD_TOKEN")),
 	}, nil
 }
 

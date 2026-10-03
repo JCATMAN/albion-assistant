@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"albion-assistant/nats/internal/alert"
 	"albion-assistant/nats/internal/cell"
 	"albion-assistant/nats/internal/location"
 	"albion-assistant/nats/internal/order"
@@ -16,8 +17,19 @@ const (
 
 // Store is the Redis writer used by the loop.
 type Store interface {
-	Apply(ctx context.Context, update cell.Update) error
+	Apply(ctx context.Context, update cell.Update) (cell.Applied, error)
 	Stale(ctx context.Context, olderThan time.Time, limit int) ([]cell.Key, error)
+}
+
+// AlertBook finds watches whose target a new price has crossed.
+type AlertBook interface {
+	Due(ctx context.Context, cellKey string, side string, price int) ([]alert.Alert, error)
+	Remove(ctx context.Context, item alert.Alert) error
+}
+
+// AlertSender publishes one watch to its Discord channel.
+type AlertSender interface {
+	Send(ctx context.Context, item alert.Alert, price int) error
 }
 
 // Prices is the West API backup.
@@ -37,6 +49,8 @@ type Deps struct {
 	Now        func() time.Time
 	Logf       func(format string, args ...any)
 	TickDone   chan struct{}
+	Alerts     AlertBook
+	Sender     AlertSender
 }
 
 // Run blocks until ctx is cancelled. It returns nil after a short drain of the order queue.
@@ -147,14 +161,45 @@ func applyAPI(ctx context.Context, deps Deps, updates []cell.Update) {
 
 func write(ctx context.Context, deps Deps, update cell.Update) {
 	var err error
+	var applied cell.Applied
 	for attempt := 1; attempt <= writeAttempts; attempt++ {
-		err = deps.Store.Apply(ctx, update)
+		applied, err = deps.Store.Apply(ctx, update)
 		if err == nil {
 			deps.Logf("stored %s source=%s", update.Key.String(), update.Source)
+			notify(ctx, deps, update.Key, applied)
 			return
 		}
 	}
 	deps.Logf("redis apply failed for %s: %v", update.Key.String(), err)
+}
+
+func notify(ctx context.Context, deps Deps, key cell.Key, applied cell.Applied) {
+	if deps.Alerts == nil || deps.Sender == nil || !applied.Written {
+		return
+	}
+	if applied.SellChanged && applied.HasSell {
+		deliver(ctx, deps, key.String(), "sell", applied.SellMin)
+	}
+	if applied.BuyChanged && applied.HasBuy {
+		deliver(ctx, deps, key.String(), "buy", applied.BuyMax)
+	}
+}
+
+func deliver(ctx context.Context, deps Deps, cellKey, side string, price int) {
+	hits, err := deps.Alerts.Due(ctx, cellKey, side, price)
+	if err != nil {
+		deps.Logf("alert lookup failed for %s: %v", cellKey, err)
+		return
+	}
+	for _, hit := range hits {
+		if err := deps.Sender.Send(ctx, hit, price); err != nil {
+			deps.Logf("alert send failed for %s: %v", hit.ID, err)
+			continue
+		}
+		if err := deps.Alerts.Remove(ctx, hit); err != nil {
+			deps.Logf("alert remove failed for %s: %v", hit.ID, err)
+		}
+	}
 }
 
 func drain(deps Deps) {

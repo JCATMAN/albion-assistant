@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"albion-assistant/nats/internal/alert"
 	"albion-assistant/nats/internal/cell"
 	"albion-assistant/nats/internal/order"
 )
@@ -18,14 +19,25 @@ type fakeStore struct {
 	applied chan cell.Update
 }
 
-func (store *fakeStore) Apply(ctx context.Context, update cell.Update) error {
+func (store *fakeStore) Apply(ctx context.Context, update cell.Update) (cell.Applied, error) {
 	store.mu.Lock()
 	store.updates = append(store.updates, update)
 	store.mu.Unlock()
 	if store.applied != nil {
 		store.applied <- update
 	}
-	return nil
+	applied := cell.Applied{Written: true}
+	if update.SellMin != nil {
+		applied.SellChanged = true
+		applied.HasSell = true
+		applied.SellMin = *update.SellMin
+	}
+	if update.BuyMax != nil {
+		applied.BuyChanged = true
+		applied.HasBuy = true
+		applied.BuyMax = *update.BuyMax
+	}
+	return applied, nil
 }
 
 func (store *fakeStore) Stale(ctx context.Context, olderThan time.Time, limit int) ([]cell.Key, error) {
@@ -253,6 +265,79 @@ func TestRunCancelReturnsNil(t *testing.T) {
 	if err := Run(ctx, Deps{Store: &fakeStore{}, Prices: &fakePrices{}}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestRunSendsAndRemovesACrossedSellAlert(t *testing.T) {
+	orders := make(chan order.Order, 1)
+	sent := make(chan alert.Alert, 1)
+	book := &fakeAlerts{due: []alert.Alert{{
+		ID: "abc", Item: "T4_BAG", Name: "Bolsa", City: "Caerleon",
+		Quality: 1, Side: "sell", Target: 5000, ChannelID: "100", UserID: "42",
+	}}}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Deps{
+			Orders: orders,
+			Store:  &fakeStore{},
+			Prices: &fakePrices{},
+			Alerts: book,
+			Sender: &fakeSender{sent: sent},
+			Now:    func() time.Time { return time.Unix(100, 0) },
+		})
+	}()
+	orders <- order.Order{
+		Item: "T4_BAG", Location: 3005, Side: order.SideSell, Price: 4000, Amount: 1, Quality: 1,
+	}
+	select {
+	case item := <-sent:
+		if item.ID != "abc" {
+			t.Fatalf("%+v", item)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("alert was not sent")
+	}
+	cancel()
+	waitDone(t, done)
+	removed := book.removedIDs()
+	if len(removed) != 1 || removed[0] != "abc" {
+		t.Fatalf("removed %#v", removed)
+	}
+}
+
+type fakeAlerts struct {
+	mu      sync.Mutex
+	due     []alert.Alert
+	removed []string
+}
+
+func (book *fakeAlerts) Due(ctx context.Context, cellKey string, side string, price int) ([]alert.Alert, error) {
+	book.mu.Lock()
+	defer book.mu.Unlock()
+	return append([]alert.Alert(nil), book.due...), nil
+}
+
+func (book *fakeAlerts) Remove(ctx context.Context, item alert.Alert) error {
+	book.mu.Lock()
+	book.removed = append(book.removed, item.ID)
+	book.mu.Unlock()
+	return nil
+}
+
+func (book *fakeAlerts) removedIDs() []string {
+	book.mu.Lock()
+	defer book.mu.Unlock()
+	return append([]string(nil), book.removed...)
+}
+
+type fakeSender struct {
+	sent chan alert.Alert
+}
+
+func (sender *fakeSender) Send(ctx context.Context, item alert.Alert, price int) error {
+	sender.sent <- item
+	return nil
 }
 
 func waitDone(t *testing.T, done <-chan error) {

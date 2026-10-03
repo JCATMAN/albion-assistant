@@ -27,7 +27,7 @@ sequenceDiagram
 
 Orden dentro del select:
 
-- Orden NATS: `location.City`, si no está en la tabla se ignora, si está se `store.Apply` con source `nats`.
+- Orden NATS: `location.City`, si no está en la tabla se ignora, si está se `store.Apply` con source `nats`. Si el mejor precio cambió, se revisan los avisos de esa celda.
 - Tick: arma el respaldo descrito en [respaldo-api.md](respaldo-api.md).
 - `ctx.Done`: return nil.
 
