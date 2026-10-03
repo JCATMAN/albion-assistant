@@ -6,12 +6,15 @@ export function discordDeferType(body: unknown): 5 | 6 | undefined {
   }
   if (record.type === 2) {
     const data = asRecord(record.data);
-    return data?.name === 'price' ? 5 : undefined;
+    return data?.name === 'price' || data?.name === 'arbitrage' ? 5 : undefined;
   }
   if (record.type === 3) {
     const data = asRecord(record.data);
     return typeof data?.custom_id === 'string' &&
-      (data.custom_id.startsWith('pq:') || data.custom_id.startsWith('pe:'))
+      (data.custom_id.startsWith('pq:') ||
+        data.custom_id.startsWith('pe:') ||
+        data.custom_id.startsWith('aq:') ||
+        data.custom_id.startsWith('ae:'))
       ? 6
       : undefined;
   }

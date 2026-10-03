@@ -1,3 +1,4 @@
+import { arbitrageCommand } from './arbitrage-command';
 import { priceCommand } from './price-command';
 
 function required(name: string): string {
@@ -8,7 +9,7 @@ function required(name: string): string {
   return value.trim();
 }
 
-/** Registers the price command. Run with npm run register:commands, not at boot. */
+/** Registers price and arbitrage. Run with npm run register:commands, not at boot. */
 async function registerCommands(): Promise<void> {
   const token = required('DISCORD_TOKEN');
   const applicationId = required('DISCORD_APP_ID');
@@ -20,7 +21,7 @@ async function registerCommands(): Promise<void> {
         Authorization: `Bot ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify([priceCommand]),
+      body: JSON.stringify([priceCommand, arbitrageCommand]),
     },
   );
   if (!response.ok) {

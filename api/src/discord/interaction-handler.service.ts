@@ -4,9 +4,12 @@ import { CatalogService, ItemSuggestion } from '../catalog/catalog.service';
 import { PriceQuery } from '../prices/price.types';
 import { PricesService } from '../prices/prices.service';
 import { discordCallback } from './discord-defer';
+import { buildArbitrageEmbed } from './arbitrage.embed';
+import { findArbitrage } from '../prices/arbitrage';
 import { buildPriceEmbed, DiscordEmbed } from './embed.builder';
 import {
   buildPriceButtons,
+  buttonCommand,
   decodePriceButton,
   DiscordActionRow,
 } from './price-buttons';
@@ -62,6 +65,9 @@ export class InteractionHandler {
     }
     if (interaction.type === 2 && interaction.name === 'price') {
       return this.price(interaction);
+    }
+    if (interaction.type === 2 && interaction.name === 'arbitrage') {
+      return this.arbitrage(interaction);
     }
     if (interaction.type === 3 && interaction.customId) {
       return this.button(interaction.customId, interaction.locale);
@@ -168,13 +174,53 @@ export class InteractionHandler {
     };
   }
 
+  private async arbitrage(
+    interaction: ParsedInteraction,
+  ): Promise<InteractionResponse> {
+    const itemOption = interaction.options.find((option) => option.name === 'item');
+    const itemText =
+      itemOption && typeof itemOption.value === 'string' ? itemOption.value.trim() : '';
+    if (!itemText || !this.catalog.findByUniqueName(itemText)) {
+      return {
+        type: 4,
+        data: {
+          embeds: [
+            {
+              title: 'Elige una sugerencia',
+              description: 'El arbitraje no adivina el objeto. Elige una opción del listado.',
+            },
+          ],
+        },
+      };
+    }
+    const chosenQuality = readIntegerOption(interaction.options, 'quality', 1, 5);
+    const chosenEnchantment = readIntegerOption(interaction.options, 'enchantment', 0, 4);
+    return {
+      type: 4,
+      data: await this.arbitrageMessage({
+        item: itemText,
+        quality: chosenQuality ?? 1,
+        enchantment: chosenEnchantment ?? enchantmentFromItem(itemText),
+        showButtons: chosenQuality === undefined && chosenEnchantment === undefined,
+        locale: interaction.locale,
+      }),
+    };
+  }
+
   private async button(
     customId: string,
     locale: CatalogLocale,
   ): Promise<InteractionResponse> {
     const state = decodePriceButton(customId);
-    if (!state) {
+    const command = buttonCommand(customId);
+    if (!state || !command) {
       return unsupported();
+    }
+    if (command === 'arbitrage') {
+      return {
+        type: 7,
+        data: await this.arbitrageMessage({ ...state, locale, showButtons: true }),
+      };
     }
     return {
       type: 7,
@@ -210,6 +256,44 @@ export class InteractionHandler {
         enchantment: input.enchantment,
         ...(input.city ? { city: input.city } : {}),
       });
+    }
+    return message;
+  }
+
+  private async arbitrageMessage(input: {
+    item: string;
+    quality: number;
+    enchantment: number;
+    locale: CatalogLocale;
+    showButtons: boolean;
+  }): Promise<{ embeds: DiscordEmbed[]; components?: DiscordActionRow[] }> {
+    const prices = await this.prices.get({
+      item: input.item,
+      locale: input.locale,
+      qualities: String(input.quality),
+      enchantment: input.enchantment,
+    });
+    const route = findArbitrage(prices.cells);
+    const message: { embeds: DiscordEmbed[]; components?: DiscordActionRow[] } = {
+      embeds: [
+        buildArbitrageEmbed({
+          name: prices.name,
+          iconUrl: prices.cells[0]?.iconUrl,
+          quality: input.quality,
+          enchantment: input.enchantment,
+          route,
+        }),
+      ],
+    };
+    if (input.showButtons) {
+      message.components = buildPriceButtons(
+        {
+          item: input.item,
+          quality: input.quality,
+          enchantment: input.enchantment,
+        },
+        'a',
+      );
     }
     return message;
   }

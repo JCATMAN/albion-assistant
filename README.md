@@ -166,7 +166,11 @@ cd api
 DISCORD_TOKEN=... DISCORD_APP_ID=... npm run register:commands
 ```
 
-El comando se llama `price`. Las opciones son `item` (autocompletado), `city`, `quality` y `enchantment`. En Discord, con el idioma español, se muestran como Precio, Objeto, Ciudad, Calidad y Encantamiento. El autocompletado admite 25 opciones y no lleva imagen. El icono va en el embed de la respuesta. Hay que contestar en menos de 3 segundos.
+El comando `price` muestra la tabla por ciudad. En español se ve como Precio. Las opciones son objeto, ciudad, calidad y encantamiento. Si no eliges calidad ni encantamiento, aparecen botones para cambiarlos sin un mensaje nuevo.
+
+El comando `arbitrage` busca la ruta: comprar en la ciudad más conveniente y vender al instante en otra. En español se ve como Arbitraje. No pide ciudad. El detalle está en [api/docs/arbitraje.md](api/docs/arbitraje.md).
+
+El autocompletado admite 25 opciones y no lleva imagen. El icono va en el embed. Hay que contestar en menos de 3 segundos: el bot avisa a Discord al momento y edita el mensaje cuando el precio está listo.
 
 Firma inválida: `401`. El handler no corre y no consulta precios.
 

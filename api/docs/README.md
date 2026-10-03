@@ -17,6 +17,7 @@ El código —archivos, clases, funciones, DTOs, tests y comentarios— va en in
 | [iconos.md](iconos.md) | URL del render |
 | [precios.md](precios.md) | `GET /prices` |
 | [discord.md](discord.md) | Interactions, autocompletado y embed |
+| [arbitraje.md](arbitraje.md) | Dónde comprar barato y vender caro |
 | [docker.md](docker.md) | Imagen y servicio en el VPS |
 
 ## Resultado del módulo

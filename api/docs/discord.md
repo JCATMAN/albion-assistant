@@ -4,7 +4,7 @@
 
 Discord llama a este proceso. No hay otro servicio de bot. El slash command se registra con un script. Cada uso llega como `POST /discord/interactions`.
 
-El comando, en código, se llama `price`. Las opciones se llaman `item`, `city`, `quality` y `enchantment`. Los textos que ve el usuario en español van en las localizaciones de Discord, no en los identificadores.
+Hay dos comandos. `price` muestra la tabla por ciudad. `arbitrage` busca la ruta de compra y venta; el detalle está en [arbitraje.md](arbitraje.md). Las opciones de `price` se llaman `item`, `city`, `quality` y `enchantment`. `arbitrage` no tiene `city`. Los textos que ve el usuario en español van en las localizaciones de Discord, no en los identificadores.
 
 Documentación: [Application Commands](https://docs.discord.com/developers/interactions/application-commands).
 
@@ -29,13 +29,13 @@ El autocompletado admite 25 opciones, cada una con `name` y `value` de hasta 100
 |---|---|
 | `1` PING | `{ type: 1 }` |
 | `4` autocomplete, opción `item` enfocada | `{ type: 8, data: { choices } }` desde `CatalogService.suggest` |
-| `2` comando `price` | `{ type: 4, data: { embeds } }` desde `PricesService.get` |
+| `2` comando `price` o `arbitrage` | aviso inmediato y luego el embed, desde `PricesService.get` |
 
 `choices[].name` es el nombre visible (`Bolsa del iniciado · T4.1`). `choices[].value` es el `uniqueName` (`T4_BAG@1`). Si la persona envía el comando con un texto que no es una sola sugerencia, el embed pide que elija una opción. No se adivina.
 
-`embed.builder.ts` arma un embed por respuesta: título con el nombre, una línea por celda (`fresh`, `stale` o `missing`), precios de venta y compra, cantidad si existe, promedio si existe, y `thumbnail.url` con `iconUrl`. Las celdas `missing` se pueden omitir del cuerpo cuando la consulta pidió las ocho ciudades y solo algunas tienen dato. Si todas faltan, el embed lo dice.
+`embed.builder.ts` arma el embed de precio: título, calidad y encantamiento, tabla de venta y compra, y `thumbnail.url` con `iconUrl`. `arbitrage.embed.ts` arma las tres filas de la ruta. Si todas las celdas faltan, el embed lo dice.
 
-El script `src/discord/register-commands.ts` hace `PUT /applications/{appId}/commands` con `DISCORD_TOKEN` y `DISCORD_APP_ID`. Se corre a mano (`npm run register:commands`), no en cada arranque. Las `name_localizations` en `es-ES` muestran «Precio», «Objeto», «Ciudad», «Calidad» y «Encantamiento». El `name` por defecto sigue en inglés.
+El script `src/discord/register-commands.ts` hace `PUT /applications/{appId}/commands` con `DISCORD_TOKEN` y `DISCORD_APP_ID`. Se corre a mano (`npm run register:commands`), no en cada arranque. El mismo `PUT` registra `price` y `arbitrage`. Las `name_localizations` en `es-ES` muestran «Precio» y «Arbitraje». El `name` por defecto sigue en inglés.
 
 La URL pública del VPS apunta a `https://<host>/discord/interactions`. Sin HTTPS Discord no entrega interactions.
 

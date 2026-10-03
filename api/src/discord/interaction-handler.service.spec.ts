@@ -188,6 +188,31 @@ describe('InteractionHandler', () => {
     expect(response.type).toBe(7);
   });
 
+  it('searches every city for the best instant route', async () => {
+    get.mockResolvedValue(priced);
+
+    const response = await handler.handle({
+      type: 2,
+      data: {
+        name: 'arbitrage',
+        options: [{ name: 'item', type: 3, value: 'T4_BAG' }],
+      },
+    });
+
+    expect(get).toHaveBeenCalledWith({
+      item: 'T4_BAG',
+      locale: 'es',
+      qualities: '1',
+      enchantment: 0,
+    });
+    expect(response.type).toBe(4);
+    if (response.type !== 4) {
+      throw new Error('expected a message');
+    }
+    expect(response.data.embeds[0]?.description).toContain('No hay ruta');
+    expect(response.data.components).toHaveLength(2);
+  });
+
   it('asks for a suggestion when the item text is not a unique name', async () => {
     const response = await handler.handle({
       type: 2,

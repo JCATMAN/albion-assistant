@@ -27,7 +27,10 @@ const QUALITY_LABELS = [
 ] as const;
 
 /** Two rows: quality, then enchantment. The active value uses the primary style. */
-export function buildPriceButtons(state: PriceButtonState): DiscordActionRow[] {
+export function buildPriceButtons(
+  state: PriceButtonState,
+  family: 'p' | 'a' = 'p',
+): DiscordActionRow[] {
   return [
     {
       type: 1,
@@ -37,6 +40,7 @@ export function buildPriceButtons(state: PriceButtonState): DiscordActionRow[] {
           quality === state.quality,
           { ...state, quality },
           'q',
+          family,
         ),
       ),
     },
@@ -48,6 +52,7 @@ export function buildPriceButtons(state: PriceButtonState): DiscordActionRow[] {
           enchantment === state.enchantment,
           { ...state, enchantment },
           'e',
+          family,
         ),
       ),
     },
@@ -57,7 +62,10 @@ export function buildPriceButtons(state: PriceButtonState): DiscordActionRow[] {
 /** Reads a price button id. Returns undefined when the id is not one of ours. */
 export function decodePriceButton(customId: string): PriceButtonState | undefined {
   const parts = customId.split(':');
-  if (parts.length !== 5 || (parts[0] !== 'pq' && parts[0] !== 'pe')) {
+  if (
+    parts.length !== 5 ||
+    (parts[0] !== 'pq' && parts[0] !== 'pe' && parts[0] !== 'aq' && parts[0] !== 'ae')
+  ) {
     return undefined;
   }
   const quality = Number(parts[1]);
@@ -89,16 +97,32 @@ function button(
   selected: boolean,
   state: PriceButtonState,
   kind: 'q' | 'e',
+  family: 'p' | 'a',
 ): DiscordButton {
   return {
     type: 2,
     style: selected ? 1 : 2,
     label,
-    custom_id: encodePriceButton(state, kind),
+    custom_id: encodePriceButton(state, kind, family),
   };
 }
 
-function encodePriceButton(state: PriceButtonState, kind: 'q' | 'e'): string {
+function encodePriceButton(
+  state: PriceButtonState,
+  kind: 'q' | 'e',
+  family: 'p' | 'a',
+): string {
   const city = state.city ?? '_';
-  return `p${kind}:${state.quality}:${state.enchantment}:${city}:${state.item}`;
+  return `${family}${kind}:${state.quality}:${state.enchantment}:${city}:${state.item}`;
+}
+
+/** Which command a button belongs to. */
+export function buttonCommand(customId: string): 'price' | 'arbitrage' | undefined {
+  if (customId.startsWith('pq:') || customId.startsWith('pe:')) {
+    return 'price';
+  }
+  if (customId.startsWith('aq:') || customId.startsWith('ae:')) {
+    return 'arbitrage';
+  }
+  return undefined;
 }
