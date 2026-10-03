@@ -28,9 +28,10 @@ func TestSendPostsTheMentionWithTheBotToken(t *testing.T) {
 
 	sender := &Sender{Token: "secret-token", HTTP: server.Client(), Base: server.URL}
 	err := sender.Send(context.Background(), alert.Alert{
-		ID: "abc", Item: "T4_BAG", Name: "Bolsa", City: "Martlock",
-		Side: "sell", Target: 13000, ChannelID: "100", UserID: "42",
-	}, 12000)
+		ID: "abc", Item: "T4_BAG", Name: "Bolsa", City: "*",
+		AnyQuality: true, AnyEnchantment: true, Side: "sell", Target: 13000,
+		ChannelID: "100", UserID: "42",
+	}, "Martlock", 1, 0, 12000)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +57,7 @@ func TestSendKeepsTheErrorWhenDiscordRejects(t *testing.T) {
 	sender := &Sender{Token: "secret-token", HTTP: server.Client(), Base: server.URL}
 	err := sender.Send(context.Background(), alert.Alert{
 		ID: "abc", ChannelID: "100", UserID: "42", Side: "sell", Target: 1, City: "Martlock", Item: "T4_BAG",
-	}, 1)
+	}, "Martlock", 1, 0, 1)
 	if err == nil || !strings.Contains(err.Error(), "403") {
 		t.Fatalf("%v", err)
 	}

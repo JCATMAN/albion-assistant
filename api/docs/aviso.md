@@ -12,15 +12,15 @@ Hay un aviso por persona, celda y lado. Volver a ejecutarlo reemplaza el anterio
 
 ## Cómo hacerlo
 
-El comando pide `item`, `city` y `target`. `side` es opcional y sale en venta. Calidad y encantamiento son opcionales: si no vienen, se usa Normal y el encantamiento del objeto, o 0.
+El comando pide `item` y `target`. Ciudad, lado, calidad y encantamiento son opcionales. Si no vienen, el aviso vale para cualquier ciudad, la venta, cualquier calidad y cualquier encantamiento. El lado, si no se elige, es la venta.
 
-`InteractionHandler` lee el precio actual con `PricesService.get` de esa ciudad. `describeAlert` decide el texto. Si todavía no cruzó, `AlertService.save` escribe Redis:
+`InteractionHandler` lee las celdas que ya están en Redis, sin pedir el API West. Si alguna ya cruzó el objetivo, la respuesta dice dónde y no guarda nada. Si ninguna cruzó, `AlertService.save` escribe Redis:
 
 | Clave | Qué es |
 |---|---|
-| `alert:{id}` | hash con objeto, nombre, ciudad, calidad, encantamiento, lado, objetivo, canal y usuario |
-| `alerts:west:{objeto}:{ciudad}:q{calidad}:e{encantamiento}` | set de ids que miran esa celda |
-| `alert-owner:{usuario}:{clave de celda}:{lado}` | el id vigente de esa persona |
+| `alert:{id}` | hash con objeto, nombre, ciudad, calidad, encantamiento, lado, objetivo, canal y usuario. Un `*` es «cualquiera» |
+| `alerts:item:{objeto}` | set de ids que miran ese objeto |
+| `alert-owner:{usuario}:{objeto}:{lado}` | el id vigente de esa persona para ese objeto y lado |
 
 El objeto se guarda sin `@`. El encantamiento va en la clave, igual que el precio. Estas claves no llevan TTL: viven hasta que el writer las borra o hasta que otro comando las reemplaza.
 
@@ -30,7 +30,7 @@ El registro va en el mismo `PUT` de `npm run register:commands`, junto con `pric
 
 ## Resultado esperado
 
-`T4_BAG` en Caerleon, venta, objetivo 4.000, con la venta actual en 4.978, responde «Aviso guardado» y deja el hash. El mismo comando con objetivo 6.000 responde que ya cruzó y no escribe Redis.
+`T4_BAG` y objetivo 4.000, sin ciudad, con la venta de Caerleon en 4.978, responde «Aviso guardado» y deja el hash con ciudad, calidad y encantamiento en `*`. El mismo comando con objetivo 6.000 responde que ya cruzó, nombra la ciudad y no escribe Redis.
 
 ## Pruebas
 

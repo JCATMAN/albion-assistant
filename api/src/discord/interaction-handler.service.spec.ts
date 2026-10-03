@@ -47,6 +47,7 @@ describe('InteractionHandler', () => {
   const suggest = jest.fn();
   const findByUniqueName = jest.fn();
   const get = jest.fn();
+  const listStored = jest.fn();
   const save = jest.fn();
   let handler: InteractionHandler;
 
@@ -54,6 +55,7 @@ describe('InteractionHandler', () => {
     suggest.mockReset();
     findByUniqueName.mockReset();
     get.mockReset();
+    listStored.mockReset();
     save.mockReset();
     findByUniqueName.mockImplementation((uniqueName: string) =>
       uniqueName === 'T4_BAG' || uniqueName === 'T4_BAG@1' ? bag : undefined,
@@ -65,7 +67,7 @@ describe('InteractionHandler', () => {
           provide: CatalogService,
           useValue: { suggest, findByUniqueName },
         },
-        { provide: PricesService, useValue: { get } },
+        { provide: PricesService, useValue: { get, listStored } },
         { provide: AlertService, useValue: { save } },
       ],
     }).compile();
@@ -218,7 +220,7 @@ describe('InteractionHandler', () => {
   });
 
   it('stores an alert when the sell price is still above the target', async () => {
-    get.mockResolvedValue(priced);
+    listStored.mockResolvedValue(priced.cells);
     save.mockResolvedValue('created');
 
     const response = await handler.handle({
@@ -235,12 +237,18 @@ describe('InteractionHandler', () => {
       },
     });
 
+    expect(listStored).toHaveBeenCalledWith({
+      item: 'T4_BAG',
+      cities: ['Caerleon'],
+      qualities: [1, 2, 3, 4, 5],
+      enchantments: [0, 1, 2, 3, 4],
+    });
     expect(save).toHaveBeenCalledWith({
       item: 'T4_BAG',
       name: 'Bolsa del iniciado',
       city: 'Caerleon',
-      quality: 1,
-      enchantment: 0,
+      quality: null,
+      enchantment: null,
       side: 'sell',
       target: 4000,
       channelId: '100',
@@ -253,8 +261,39 @@ describe('InteractionHandler', () => {
     expect(response.data.embeds[0]?.title).toBe('Aviso guardado');
   });
 
+  it('watches every city when the user only sets the item and the target', async () => {
+    listStored.mockResolvedValue([
+      { ...priced.cells[0], city: 'Martlock', sellMin: 20000 },
+    ]);
+    save.mockResolvedValue('created');
+
+    const response = await handler.handle({
+      type: 2,
+      channel_id: '100',
+      member: { user: { id: '42' } },
+      data: {
+        name: 'alert',
+        options: [
+          { name: 'item', type: 3, value: 'T4_BAG' },
+          { name: 'target', type: 4, value: 4000 },
+        ],
+      },
+    });
+
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({ city: null, quality: null, enchantment: null, target: 4000 }),
+    );
+    expect(response.type).toBe(4);
+    if (response.type !== 4) {
+      throw new Error('expected a message');
+    }
+    expect(response.data.embeds[0]?.description).toBe(
+      'Te aviso en este canal cuando la venta de Bolsa del iniciado baje a 4.000 o menos.',
+    );
+  });
+
   it('does not store an alert that the current price already meets', async () => {
-    get.mockResolvedValue(priced);
+    listStored.mockResolvedValue(priced.cells);
 
     const response = await handler.handle({
       type: 2,

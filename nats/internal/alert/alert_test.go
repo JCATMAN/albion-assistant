@@ -1,6 +1,10 @@
 package alert
 
-import "testing"
+import (
+	"testing"
+
+	"albion-assistant/nats/internal/cell"
+)
 
 func TestCrossedSellFiresAtOrBelowTarget(t *testing.T) {
 	if !Crossed("sell", 13000, 12000) || !Crossed("sell", 13000, 13000) {
@@ -29,30 +33,43 @@ func TestContentMentionsTheUserAndGroupsSilver(t *testing.T) {
 		Side:   "sell",
 		Target: 13000,
 	}
-	text := Content(item, 12855)
-	if text != "<@42> **Bolsa script** en Martlock: la venta bajó a 12.855. Pediste 13.000 o menos." {
+	text := Content(item, "Martlock", 2, 0, 12855)
+	if text != "<@42> **Bolsa script** en Martlock · Buena · encantamiento 0: la venta bajó a 12.855. Pediste 13.000 o menos." {
 		t.Fatalf("%s", text)
 	}
 	item.Side = "buy"
 	item.Target = 14000
-	buy := Content(item, 15133)
-	if buy != "<@42> **Bolsa script** en Martlock: la compra subió a 15.133. Pediste 14.000 o más." {
+	buy := Content(item, "Martlock", 2, 0, 15133)
+	if buy != "<@42> **Bolsa script** en Martlock · Buena · encantamiento 0: la compra subió a 15.133. Pediste 14.000 o más." {
 		t.Fatalf("%s", buy)
 	}
 }
 
-func TestKeysMatchTheAPIContract(t *testing.T) {
-	item := Alert{ID: "abc", Item: "T4_BAG", City: "Fort Sterling", Quality: 1, Enchantment: 0, Side: "sell", UserID: "42"}
-	if item.CellKey() != "west:T4_BAG:Fort Sterling:q1:e0" {
-		t.Fatalf("cell %s", item.CellKey())
+func TestOpenAlertMatchesAnyCityQualityAndEnchantment(t *testing.T) {
+	item := Alert{Item: "T4_BAG", City: "*", AnyQuality: true, AnyEnchantment: true, Side: "sell", Target: 13000}
+	hit := cell.Key{Item: "T4_BAG", City: "Martlock", Quality: 3, Enchantment: 2}
+	if !item.Matches(hit, "sell", 12000) {
+		t.Fatal("open sell watch should match")
 	}
-	if IndexKey(item.CellKey()) != "alerts:west:T4_BAG:Fort Sterling:q1:e0" {
-		t.Fatalf("index %s", IndexKey(item.CellKey()))
+	if item.Matches(hit, "sell", 14000) || item.Matches(hit, "buy", 12000) {
+		t.Fatal("a higher sell or the other side should stay quiet")
+	}
+	item.City = "Caerleon"
+	item.AnyQuality = false
+	item.Quality = 1
+	if item.Matches(hit, "sell", 12000) {
+		t.Fatal("a different city and quality should stay quiet")
+	}
+}
+
+func TestKeysMatchTheAPIContract(t *testing.T) {
+	if ItemIndex("T4_BAG") != "alerts:item:T4_BAG" {
+		t.Fatalf("index %s", ItemIndex("T4_BAG"))
 	}
 	if RecordKey("abc") != "alert:abc" {
 		t.Fatalf("record %s", RecordKey("abc"))
 	}
-	if OwnerKey("42", item.CellKey(), "sell") != "alert-owner:42:west:T4_BAG:Fort Sterling:q1:e0:sell" {
-		t.Fatalf("owner %s", OwnerKey("42", item.CellKey(), "sell"))
+	if OwnerKey("42", "T4_BAG", "sell") != "alert-owner:42:T4_BAG:sell" {
+		t.Fatalf("owner %s", OwnerKey("42", "T4_BAG", "sell"))
 	}
 }

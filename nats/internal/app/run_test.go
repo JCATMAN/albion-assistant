@@ -312,7 +312,7 @@ type fakeAlerts struct {
 	removed []string
 }
 
-func (book *fakeAlerts) Due(ctx context.Context, cellKey string, side string, price int) ([]alert.Alert, error) {
+func (book *fakeAlerts) Due(ctx context.Context, key cell.Key, side string, price int) ([]alert.Alert, error) {
 	book.mu.Lock()
 	defer book.mu.Unlock()
 	return append([]alert.Alert(nil), book.due...), nil
@@ -335,7 +335,7 @@ type fakeSender struct {
 	sent chan alert.Alert
 }
 
-func (sender *fakeSender) Send(ctx context.Context, item alert.Alert, price int) error {
+func (sender *fakeSender) Send(ctx context.Context, item alert.Alert, city string, quality int, enchantment int, price int) error {
 	sender.sent <- item
 	return nil
 }

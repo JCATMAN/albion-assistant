@@ -99,6 +99,43 @@ export class PricesService {
     return { uniqueName, name, cells };
   }
 
+  /** Reads stored cells without calling the West API. Alerts use it to see a price that is already there. */
+  async listStored(input: {
+    item: string;
+    cities: readonly string[];
+    qualities: readonly number[];
+    enchantments: readonly number[];
+  }): Promise<PriceCell[]> {
+    const baseUniqueName = input.item.replace(/@[0-4]$/, '');
+    const keys: string[] = [];
+    const identities: Array<{
+      city: string;
+      quality: number;
+      enchantment: number;
+      uniqueName: string;
+    }> = [];
+    for (const enchantment of input.enchantments) {
+      const uniqueName =
+        enchantment > 0 ? `${baseUniqueName}@${enchantment}` : baseUniqueName;
+      for (const city of input.cities) {
+        for (const quality of input.qualities) {
+          keys.push(
+            cellKey({ uniqueName: baseUniqueName, city, quality, enchantment }),
+          );
+          identities.push({ city, quality, enchantment, uniqueName });
+        }
+      }
+    }
+    const storedByKey = await this.readCells(keys);
+    return keys.map((key, index) => {
+      const identity = identities[index];
+      if (!identity) {
+        throw new Error('Missing cell identity');
+      }
+      return this.toCell(storedByKey.get(key) ?? emptyStoredCell(), identity);
+    });
+  }
+
   /** Asks the West API for cells Redis has never seen, then stores that observation. */
   private async fillMissingFromAlbion(
     uniqueName: string,

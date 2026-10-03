@@ -54,16 +54,16 @@ describe('AlertService', () => {
   const draft = {
     item: 'T4_BAG@1',
     name: 'Bolsa del iniciado',
-    city: 'Fort Sterling',
-    quality: 1,
-    enchantment: 1,
+    city: null,
+    quality: null,
+    enchantment: null,
     side: 'sell' as const,
     target: 13000,
     channelId: '100',
     userId: '42',
   };
 
-  it('stores the base item and indexes the cell', async () => {
+  it('stores an open watch on the item index', async () => {
     const redis = new MemoryAlertRedis();
     const service = new AlertService(redis, () => 'id-1');
 
@@ -71,33 +71,34 @@ describe('AlertService', () => {
 
     expect(redis.hashes.get('alert:id-1')).toMatchObject({
       item: 'T4_BAG',
-      city: 'Fort Sterling',
-      quality: '1',
-      enchantment: '1',
+      city: '*',
+      quality: '*',
+      enchantment: '*',
       side: 'sell',
       target: '13000',
       channel_id: '100',
       user_id: '42',
     });
-    expect(
-      redis.sets.get('alerts:west:T4_BAG:Fort Sterling:q1:e1')?.has('id-1'),
-    ).toBe(true);
-    expect(
-      redis.values.get('alert-owner:42:west:T4_BAG:Fort Sterling:q1:e1:sell'),
-    ).toBe('id-1');
+    expect(redis.sets.get('alerts:item:T4_BAG')?.has('id-1')).toBe(true);
+    expect(redis.values.get('alert-owner:42:T4_BAG:sell')).toBe('id-1');
   });
 
-  it('replaces the previous watch for the same user, cell, and side', async () => {
+  it('replaces the previous watch for the same user, item, and side', async () => {
     const redis = new MemoryAlertRedis();
     const ids = ['id-1', 'id-2'];
     const service = new AlertService(redis, () => ids.shift() ?? 'id-x');
 
     await service.save(draft);
-    await expect(service.save({ ...draft, target: 9000 })).resolves.toBe('updated');
+    await expect(
+      service.save({ ...draft, city: 'Martlock', target: 9000 }),
+    ).resolves.toBe('updated');
 
     expect(redis.hashes.has('alert:id-1')).toBe(false);
-    expect(redis.hashes.get('alert:id-2')?.target).toBe('9000');
-    const members = redis.sets.get('alerts:west:T4_BAG:Fort Sterling:q1:e1');
+    expect(redis.hashes.get('alert:id-2')).toMatchObject({
+      city: 'Martlock',
+      target: '9000',
+    });
+    const members = redis.sets.get('alerts:item:T4_BAG');
     expect(members?.has('id-1')).toBe(false);
     expect(members?.has('id-2')).toBe(true);
   });

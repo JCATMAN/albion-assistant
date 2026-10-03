@@ -3,12 +3,12 @@ export function alertRecordKey(id: string): string {
   return `alert:${id}`;
 }
 
-/** Set of alert ids watching one market cell. */
-export function alertIndexKey(cellKey: string): string {
-  return `alerts:${cellKey}`;
+/** Set of alert ids watching one base item, in any city. */
+export function alertIndexKey(item: string): string {
+  return `alerts:item:${item}`;
 }
 
-/** One alert per user, cell, and side. A new command replaces this id. */
-export function alertOwnerKey(userId: string, cellKey: string, side: string): string {
-  return `alert-owner:${userId}:${cellKey}:${side}`;
+/** One alert per user, item, and side. A new command replaces this id. */
+export function alertOwnerKey(userId: string, item: string, side: string): string {
+  return `alert-owner:${userId}:${item}:${side}`;
 }

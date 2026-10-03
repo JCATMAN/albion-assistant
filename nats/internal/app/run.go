@@ -23,13 +23,13 @@ type Store interface {
 
 // AlertBook finds watches whose target a new price has crossed.
 type AlertBook interface {
-	Due(ctx context.Context, cellKey string, side string, price int) ([]alert.Alert, error)
+	Due(ctx context.Context, key cell.Key, side string, price int) ([]alert.Alert, error)
 	Remove(ctx context.Context, item alert.Alert) error
 }
 
 // AlertSender publishes one watch to its Discord channel.
 type AlertSender interface {
-	Send(ctx context.Context, item alert.Alert, price int) error
+	Send(ctx context.Context, item alert.Alert, city string, quality int, enchantment int, price int) error
 }
 
 // Prices is the West API backup.
@@ -178,21 +178,21 @@ func notify(ctx context.Context, deps Deps, key cell.Key, applied cell.Applied) 
 		return
 	}
 	if applied.SellChanged && applied.HasSell {
-		deliver(ctx, deps, key.String(), "sell", applied.SellMin)
+		deliver(ctx, deps, key, "sell", applied.SellMin)
 	}
 	if applied.BuyChanged && applied.HasBuy {
-		deliver(ctx, deps, key.String(), "buy", applied.BuyMax)
+		deliver(ctx, deps, key, "buy", applied.BuyMax)
 	}
 }
 
-func deliver(ctx context.Context, deps Deps, cellKey, side string, price int) {
-	hits, err := deps.Alerts.Due(ctx, cellKey, side, price)
+func deliver(ctx context.Context, deps Deps, key cell.Key, side string, price int) {
+	hits, err := deps.Alerts.Due(ctx, key, side, price)
 	if err != nil {
-		deps.Logf("alert lookup failed for %s: %v", cellKey, err)
+		deps.Logf("alert lookup failed for %s: %v", key.String(), err)
 		return
 	}
 	for _, hit := range hits {
-		if err := deps.Sender.Send(ctx, hit, price); err != nil {
+		if err := deps.Sender.Send(ctx, hit, key.City, key.Quality, key.Enchantment, price); err != nil {
 			deps.Logf("alert send failed for %s: %v", hit.ID, err)
 			continue
 		}

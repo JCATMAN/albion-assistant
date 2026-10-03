@@ -2,10 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AlertService, AlertSide } from '../alerts/alert.service';
 import { CatalogLocale } from '../catalog/item-name.index';
 import { CatalogService, ItemSuggestion } from '../catalog/catalog.service';
-import { isMarketCity } from '../catalog/market-cities';
+import { isMarketCity, MARKET_CITIES } from '../catalog/market-cities';
 import { PriceQuery } from '../prices/price.types';
 import { PricesService } from '../prices/prices.service';
-import { describeAlert } from './alert.reply';
+import { bestAlertHit, describeAlert } from './alert.reply';
 import { discordCallback } from './discord-defer';
 import { buildArbitrageEmbed } from './arbitrage.embed';
 import { findArbitrage } from '../prices/arbitrage';
@@ -227,13 +227,13 @@ export class InteractionHandler {
         'El aviso no adivina el objeto. Elige una opción del listado.',
       );
     }
-    const city = readStringOption(interaction.options, 'city');
-    if (!city || !isMarketCity(city)) {
-      return messageEmbed('Elige una ciudad', 'El aviso sigue una sola ciudad de la lista.');
-    }
     const target = readIntegerOption(interaction.options, 'target', 1, 1_000_000_000);
     if (target === undefined) {
       return messageEmbed('Precio inválido', 'El objetivo tiene que ser un entero mayor que cero.');
+    }
+    const city = readStringOption(interaction.options, 'city');
+    if (city !== undefined && !isMarketCity(city)) {
+      return messageEmbed('Elige una ciudad', 'La ciudad tiene que salir de la lista.');
     }
     const sideText = readStringOption(interaction.options, 'side') ?? 'sell';
     if (sideText !== 'sell' && sideText !== 'buy') {
@@ -246,28 +246,27 @@ export class InteractionHandler {
         'Este aviso se publica en el canal donde escribes el comando.',
       );
     }
-    const quality = readIntegerOption(interaction.options, 'quality', 1, 5) ?? 1;
-    const enchantment =
-      readIntegerOption(interaction.options, 'enchantment', 0, 4) ??
-      enchantmentFromItem(itemText);
-    const prices = await this.prices.get({
+    const quality = readIntegerOption(interaction.options, 'quality', 1, 5);
+    const enchantment = readIntegerOption(interaction.options, 'enchantment', 0, 4);
+    const cells = await this.prices.listStored({
       item: itemText,
-      locale: interaction.locale,
-      cities: city,
-      qualities: String(quality),
-      enchantment,
+      cities: city ? [city] : MARKET_CITIES,
+      qualities: quality === undefined ? [1, 2, 3, 4, 5] : [quality],
+      enchantments: enchantment === undefined ? [0, 1, 2, 3, 4] : [enchantment],
     });
-    const cell = prices.cells.find((entry) => entry.city === city);
-    const currentRaw = side === 'buy' ? cell?.buyMax : cell?.sellMin;
-    const current = currentRaw !== null && currentRaw !== undefined && currentRaw > 0 ? currentRaw : null;
     const localized = found.names[interaction.locale];
     const name = localized && localized.trim() !== '' ? localized : itemText;
+    const scope = {
+      ...(city ? { city } : {}),
+      ...(quality !== undefined ? { quality } : {}),
+      ...(enchantment !== undefined ? { enchantment } : {}),
+    };
     const preview = describeAlert({
       name,
-      city,
       side,
       target,
-      current,
+      scope,
+      hit: bestAlertHit(cells, side, target),
       replaced: false,
     });
     if (!preview.save) {
@@ -276,9 +275,9 @@ export class InteractionHandler {
     const outcome = await this.alerts.save({
       item: itemText,
       name,
-      city,
-      quality,
-      enchantment,
+      city: city ?? null,
+      quality: quality ?? null,
+      enchantment: enchantment ?? null,
       side,
       target,
       channelId: interaction.channelId,
@@ -286,7 +285,14 @@ export class InteractionHandler {
     });
     const reply =
       outcome === 'updated'
-        ? describeAlert({ name, city, side, target, current, replaced: true })
+        ? describeAlert({
+            name,
+            side,
+            target,
+            scope,
+            hit: null,
+            replaced: true,
+          })
         : preview;
     return messageEmbed(reply.title, reply.description);
   }

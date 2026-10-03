@@ -171,7 +171,7 @@ El comando `price` muestra la tabla por ciudad. En español se ve como Precio. L
 
 El comando `arbitrage` busca la ruta: comprar en la ciudad más conveniente y vender al instante en otra. En español se ve como Arbitraje. No pide ciudad. El detalle está en [api/docs/arbitraje.md](api/docs/arbitraje.md).
 
-El comando `alert` guarda un aviso en el canal donde lo escribes. En español se ve como Aviso. Pide objeto, ciudad y plata. El writer publica la mención cuando el precio cruza ese número. El detalle está en [api/docs/aviso.md](api/docs/aviso.md).
+El comando `alert` guarda un aviso en el canal donde lo escribes. En español se ve como Aviso. Pide objeto y plata. Ciudad, lado, calidad y encantamiento son opcionales: si no los pones, avisa en la primera celda que cruce. Si el precio ya está ahí, la respuesta lo dice y no guarda el aviso. El detalle está en [api/docs/aviso.md](api/docs/aviso.md).
 
 El autocompletado admite 25 opciones y no lleva imagen. El icono va en el embed. Hay que contestar en menos de 3 segundos: el bot avisa a Discord al momento y edita el mensaje cuando el precio está listo.
 

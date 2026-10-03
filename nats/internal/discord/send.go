@@ -31,14 +31,16 @@ func New(token string) *Sender {
 }
 
 // Send publishes the alert. A non-2xx response leaves the alert in Redis for a later price change.
-func (sender *Sender) Send(ctx context.Context, item alert.Alert, price int) error {
+func (sender *Sender) Send(ctx context.Context, item alert.Alert, city string, quality, enchantment, price int) error {
 	if sender.Token == "" {
 		return fmt.Errorf("DISCORD_TOKEN is empty")
 	}
 	if !digits(item.ChannelID) || !digits(item.UserID) {
 		return fmt.Errorf("alert %s has a channel or user that is not a snowflake", item.ID)
 	}
-	payload, err := json.Marshal(map[string]string{"content": alert.Content(item, price)})
+	payload, err := json.Marshal(map[string]string{
+		"content": alert.Content(item, city, quality, enchantment, price),
+	})
 	if err != nil {
 		return err
 	}

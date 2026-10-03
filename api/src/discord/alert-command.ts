@@ -31,15 +31,6 @@ export const alertCommand: DiscordCommand = {
       autocomplete: true,
     },
     {
-      name: 'city',
-      name_localizations: { 'es-ES': 'ciudad' },
-      description: 'City',
-      description_localizations: { 'es-ES': 'Ciudad' },
-      type: STRING_OPTION,
-      required: true,
-      choices: MARKET_CITIES.map((city) => ({ name: city, value: city })),
-    },
-    {
       name: 'target',
       name_localizations: { 'es-ES': 'precio' },
       description: 'Target silver',
@@ -48,6 +39,15 @@ export const alertCommand: DiscordCommand = {
       required: true,
       min_value: 1,
       max_value: 1_000_000_000,
+    },
+    {
+      name: 'city',
+      name_localizations: { 'es-ES': 'ciudad' },
+      description: 'City. Empty watches every city',
+      description_localizations: { 'es-ES': 'Ciudad. Vacío mira todas' },
+      type: STRING_OPTION,
+      required: false,
+      choices: MARKET_CITIES.map((city) => ({ name: city, value: city })),
     },
     {
       name: 'side',

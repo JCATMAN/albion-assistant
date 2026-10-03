@@ -7,11 +7,12 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
+
+	"albion-assistant/nats/internal/cell"
 )
 
 func TestDueReturnsOnlyTheSideThatCrossed(t *testing.T) {
 	book, client := newBook(t)
-	cellKey := "west:T4_BAG:Martlock:q1:e0"
 	seed(t, client, Alert{
 		ID: "sell-hit", Item: "T4_BAG", Name: "Bolsa", City: "Martlock",
 		Quality: 1, Enchantment: 0, Side: "sell", Target: 13000,
@@ -28,7 +29,9 @@ func TestDueReturnsOnlyTheSideThatCrossed(t *testing.T) {
 		ChannelID: "100", UserID: "44",
 	})
 
-	due, err := book.Due(context.Background(), cellKey, "sell", 12000)
+	due, err := book.Due(context.Background(), cell.Key{
+		Item: "T4_BAG", City: "Martlock", Quality: 1, Enchantment: 0,
+	}, "sell", 12000)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,10 +54,10 @@ func TestRemoveDropsTheHashIndexAndOwner(t *testing.T) {
 	if client.Exists(context.Background(), RecordKey(item.ID)).Val() != 0 {
 		t.Fatal("hash remains")
 	}
-	if client.SCard(context.Background(), IndexKey(item.CellKey())).Val() != 0 {
+	if client.SCard(context.Background(), ItemIndex(item.Item)).Val() != 0 {
 		t.Fatal("index remains")
 	}
-	if client.Exists(context.Background(), OwnerKey(item.UserID, item.CellKey(), item.Side)).Val() != 0 {
+	if client.Exists(context.Background(), OwnerKey(item.UserID, item.Item, item.Side)).Val() != 0 {
 		t.Fatal("owner remains")
 	}
 }
@@ -74,8 +77,8 @@ func seed(t *testing.T, client *redis.Client, item Alert) {
 		"item":        item.Item,
 		"name":        item.Name,
 		"city":        item.City,
-		"quality":     strconv.Itoa(item.Quality),
-		"enchantment": strconv.Itoa(item.Enchantment),
+		"quality":     storedInt(item.AnyQuality, item.Quality),
+		"enchantment": storedInt(item.AnyEnchantment, item.Enchantment),
 		"side":        item.Side,
 		"target":      strconv.Itoa(item.Target),
 		"channel_id":  item.ChannelID,
@@ -83,10 +86,17 @@ func seed(t *testing.T, client *redis.Client, item Alert) {
 	}).Err(); err != nil {
 		t.Fatal(err)
 	}
-	if err := client.SAdd(ctx, IndexKey(item.CellKey()), item.ID).Err(); err != nil {
+	if err := client.SAdd(ctx, ItemIndex(item.Item), item.ID).Err(); err != nil {
 		t.Fatal(err)
 	}
-	if err := client.Set(ctx, OwnerKey(item.UserID, item.CellKey(), item.Side), item.ID, 0).Err(); err != nil {
+	if err := client.Set(ctx, OwnerKey(item.UserID, item.Item, item.Side), item.ID, 0).Err(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func storedInt(any bool, value int) string {
+	if any {
+		return "*"
+	}
+	return strconv.Itoa(value)
 }
