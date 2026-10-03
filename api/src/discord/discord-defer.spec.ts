@@ -4,7 +4,7 @@ describe('discordDeferType', () => {
   it('defers the price command and price buttons', () => {
     expect(discordDeferType({ type: 2, data: { name: 'price' } })).toBe(5);
     expect(
-      discordDeferType({ type: 3, data: { custom_id: 'p:1:0:_:T4_BAG' } }),
+      discordDeferType({ type: 3, data: { custom_id: 'pq:1:0:_:T4_BAG' } }),
     ).toBe(6);
   });
 

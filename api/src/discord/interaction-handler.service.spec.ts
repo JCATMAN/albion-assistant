@@ -176,7 +176,7 @@ describe('InteractionHandler', () => {
 
     const response = await handler.handle({
       type: 3,
-      data: { custom_id: 'p:4:1:_:T4_BAG@1', component_type: 2 },
+      data: { custom_id: 'pq:4:1:_:T4_BAG@1', component_type: 2 },
     });
 
     expect(get).toHaveBeenCalledWith({

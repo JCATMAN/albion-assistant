@@ -32,19 +32,23 @@ export function buildPriceButtons(state: PriceButtonState): DiscordActionRow[] {
     {
       type: 1,
       components: [1, 2, 3, 4, 5].map((quality) =>
-        button(QUALITY_LABELS[quality] ?? String(quality), quality === state.quality, {
-          ...state,
-          quality,
-        }),
+        button(
+          QUALITY_LABELS[quality] ?? String(quality),
+          quality === state.quality,
+          { ...state, quality },
+          'q',
+        ),
       ),
     },
     {
       type: 1,
       components: [0, 1, 2, 3, 4].map((enchantment) =>
-        button(`.${enchantment}`, enchantment === state.enchantment, {
-          ...state,
-          enchantment,
-        }),
+        button(
+          `.${enchantment}`,
+          enchantment === state.enchantment,
+          { ...state, enchantment },
+          'e',
+        ),
       ),
     },
   ];
@@ -53,7 +57,7 @@ export function buildPriceButtons(state: PriceButtonState): DiscordActionRow[] {
 /** Reads a price button id. Returns undefined when the id is not one of ours. */
 export function decodePriceButton(customId: string): PriceButtonState | undefined {
   const parts = customId.split(':');
-  if (parts.length !== 5 || parts[0] !== 'p') {
+  if (parts.length !== 5 || (parts[0] !== 'pq' && parts[0] !== 'pe')) {
     return undefined;
   }
   const quality = Number(parts[1]);
@@ -84,16 +88,17 @@ function button(
   label: string,
   selected: boolean,
   state: PriceButtonState,
+  kind: 'q' | 'e',
 ): DiscordButton {
   return {
     type: 2,
     style: selected ? 1 : 2,
     label,
-    custom_id: encodePriceButton(state),
+    custom_id: encodePriceButton(state, kind),
   };
 }
 
-function encodePriceButton(state: PriceButtonState): string {
+function encodePriceButton(state: PriceButtonState, kind: 'q' | 'e'): string {
   const city = state.city ?? '_';
-  return `p:${state.quality}:${state.enchantment}:${city}:${state.item}`;
+  return `p${kind}:${state.quality}:${state.enchantment}:${city}:${state.item}`;
 }

@@ -19,7 +19,8 @@ describe('price buttons', () => {
     expect(rows[0]?.components[0]?.style).toBe(1);
     expect(rows[0]?.components[1]?.style).toBe(2);
     expect(rows[1]?.components[0]?.style).toBe(1);
-    expect(rows[1]?.components[2]?.custom_id).toBe('p:1:2:_:T5_BAG');
+    expect(rows[0]?.components[2]?.custom_id).toBe('pq:3:0:_:T5_BAG');
+    expect(rows[1]?.components[2]?.custom_id).toBe('pe:1:2:_:T5_BAG');
   });
 
   it('keeps a city name that contains a space', () => {

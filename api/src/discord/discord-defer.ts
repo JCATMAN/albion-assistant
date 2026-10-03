@@ -10,7 +10,8 @@ export function discordDeferType(body: unknown): 5 | 6 | undefined {
   }
   if (record.type === 3) {
     const data = asRecord(record.data);
-    return typeof data?.custom_id === 'string' && data.custom_id.startsWith('p:')
+    return typeof data?.custom_id === 'string' &&
+      (data.custom_id.startsWith('pq:') || data.custom_id.startsWith('pe:'))
       ? 6
       : undefined;
   }

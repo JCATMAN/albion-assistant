@@ -82,7 +82,7 @@ export class InteractionHandler {
         return;
       }
       const edit = await fetch(
-        `https://discord.com/api/v10/webhooks/${callback.applicationId}/${callback.token}/messages/@original`,
+        `https://discord.com/api/v10/webhooks/${encodeURIComponent(callback.applicationId)}/${encodeURIComponent(callback.token)}/messages/@original`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -90,8 +90,9 @@ export class InteractionHandler {
         },
       );
       if (!edit.ok) {
+        const details = (await edit.text()).slice(0, 500);
         this.logger.error(
-          `discord edit failed with HTTP ${edit.status}`,
+          `discord edit failed with HTTP ${edit.status}: ${details}`,
         );
       }
     } catch (error) {
